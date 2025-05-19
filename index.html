@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Salesforce QR Scanner</title>
     <style>
-        /* ... (Keep existing styles from previous correct version) ... */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
@@ -30,7 +29,7 @@
         }
 
         h1 {
-            color: #0070d2; /* Salesforce Blue */
+            color: #0070d2;
             margin-bottom: 20px;
         }
 
@@ -74,18 +73,26 @@
             background-color: #e9ecef;
         }
 
+        /* NEW: Container for qr-reader and its overlay */
+        .scanner-viewport-container {
+            position: relative; /* This is the new positioning context for the overlay */
+            width: 100%;
+            max-width: 400px; /* Matches your #qr-reader max-width */
+            margin: 20px auto; /* Matches your #qr-reader margin */
+            border-radius: 8px; /* Optional: if you want the container to have rounded corners */
+            overflow: hidden; /* Optional: if overlay might peek out due to transforms */
+        }
 
         #qr-reader {
-            width: 100%;
-            max-width: 400px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            margin: 20px auto;
-            overflow: hidden;
-            position: relative; /* Needed for absolute positioning of the overlay */
-            background-color: #333; /* Darker background for camera view */
+            width: 100%; /* Will fill scanner-viewport-container */
+            /* max-width, margin, and position:relative removed from here */
+            border: 1px solid #ddd; /* Keep border for visual separation if desired */
+            border-radius: 8px; /* Keep if you want rounded corners on camera itself */
+            background-color: #333;
+            /* overflow: hidden; still good here to clip video */
         }
         
+        /* This style targets elements created by html5-qrcode library itself */
         #qr-reader__dashboard_section_csr span button {
             background-color: #0070d2 !important;
             color: white !important;
@@ -94,30 +101,36 @@
             border-radius: 4px !important;
             cursor: pointer !important;
         }
+        #qr-reader__dashboard_section_csr span button:hover {
+            background-color: #005fb3 !important;
+        }
+
 
         #scan-success-overlay {
             position: absolute;
             top: 50%;
-            left: 50%;
+            left: 50%; /* Now relative to .scanner-viewport-container */
             transform: translate(-50%, -50%);
-            background-color: rgba(40, 167, 69, 0.85); /* Green, semi-transparent (Bootstrap's success green) */
+            background-color: rgba(40, 167, 69, 0.85);
             color: white;
             padding: 15px 25px;
             border-radius: 8px;
             font-size: 1.2em;
             font-weight: bold;
             text-align: center;
-            z-index: 10; /* Ensure it's above the video feed */
-            opacity: 0; /* Hidden by default */
+            z-index: 100; /* Ensure it's above #qr-reader and its contents */
+            opacity: 0;
             transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
-            pointer-events: none; /* So it doesn't interfere with scanner */
-            display: flex; /* For aligning icon and text */
+            pointer-events: none;
+            display: flex;
             align-items: center;
+            /* max-width: 90%; /* Optional: to prevent overlay from being too wide */
+            /* box-sizing: border-box; /* Optional: if padding makes it too wide */
         }
 
         #scan-success-overlay.visible {
             opacity: 1;
-            transform: translate(-50%, -50%) scale(1.05); /* Slight scale up effect */
+            transform: translate(-50%, -50%) scale(1.05);
         }
         
         #scan-success-overlay svg {
@@ -125,13 +138,9 @@
             height: 30px;
             margin-right: 10px;
             stroke: white;
-            stroke-width: 5; /* SVG checkmark properties */
+            stroke-width: 5;
             stroke-linecap: round;
             stroke-linejoin: round;
-        }
-
-        #qr-reader__dashboard_section_csr span button:hover {
-            background-color: #005fb3 !important;
         }
 
         .controls button {
@@ -160,12 +169,11 @@
             padding: 10px;
             border-radius: 5px;
             font-weight: bold;
-            min-height: 40px; /* Ensure space for messages */
+            min-height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
-            text-align: center; /* For multi-line messages */
-            
+            text-align: center;
         }
 
         .status-success {
@@ -230,7 +238,7 @@
             border-radius: 5px;
             border-left: 4px solid #0070d2;
         }
-         .instructions button { /* Style for the button inside instructions */
+         .instructions button {
             padding: 3px 8px;
             font-size: 0.9em;
             margin-left: 5px;
@@ -289,8 +297,11 @@
             </ol>
         </div>
 
-        <div id="qr-reader">
-            <!-- This is where the html5-qrcode library renders the video -->
+        <!-- ***** MODIFIED HTML STRUCTURE for SCANNER AREA ***** -->
+        <div class="scanner-viewport-container">
+            <div id="qr-reader">
+                <!-- html5-qrcode will render its video here. -->
+            </div>
             <div id="scan-success-overlay">
                 <svg viewBox="0 0 50 50">
                     <path fill="transparent" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
@@ -298,6 +309,8 @@
                 <span>Scan Successful!</span>
             </div>
         </div>
+        <!-- ***** END OF MODIFIED HTML STRUCTURE ***** -->
+
         <div id="scan-status" class="status-info">Initializing...</div>
 
         <div class="controls">
@@ -318,14 +331,19 @@
             const locationSelect = document.getElementById('location');
             const scannedByInput = document.getElementById('scannedBy');
             const dateScannedInput = document.getElementById('dateScanned');
-            const qrReaderElement = document.getElementById('qr-reader');
+            
+            // IMPORTANT: qrReaderElement now refers to the new container for scrolling purposes if needed,
+            // but the Html5Qrcode library still targets the inner div with id="qr-reader"
+            const scannerViewportContainer = document.querySelector('.scanner-viewport-container'); 
+            const qrReaderDivForLibrary = document.getElementById('qr-reader'); // This is what html5-qrcode targets
+
             const scanStatusElement = document.getElementById('scan-status');
             const scannedItemsListElement = document.getElementById('scanned-items-list');
             const startButton = document.getElementById('startButton');
             const stopButton = document.getElementById('stopButton');
             const sendButton = document.getElementById('sendButton');
             const checkLocationButton = document.getElementById('checkLocationButton');
-            const scanSuccessOverlay = document.getElementById('scan-success-overlay');
+            const scanSuccessOverlay = document.getElementById('scan-success-overlay'); // This will still be found
 
             // --- Global State ---
             const scannedItems = [];
@@ -347,7 +365,6 @@
                 if (scanStatusElement) scanStatusElement.textContent = "Error initializing date.";
             }
 
-
             // --- Helper Function Definitions ---
             function updateScannedList() {
                 if (!scannedItemsListElement) return;
@@ -367,7 +384,7 @@
             }
 
             async function checkInitialGeolocationPermission() {
-                if (!checkLocationButton || !scanStatusElement) {
+                 if (!checkLocationButton || !scanStatusElement) {
                      console.error("Required elements for geo permission check not found (checkLocationButton or scanStatusElement).");
                      if(checkLocationButton) checkLocationButton.textContent = "Geo Setup Error";
                      return;
@@ -410,15 +427,15 @@
                 if (!checkLocationButton) return;
                 if (state === 'granted') {
                     checkLocationButton.textContent = 'Location Enabled';
-                    checkLocationButton.style.backgroundColor = '#28a745'; // Green
+                    checkLocationButton.style.backgroundColor = '#28a745';
                     checkLocationButton.disabled = true;
                 } else if (state === 'denied') {
                     checkLocationButton.textContent = 'Location Denied';
-                    checkLocationButton.style.backgroundColor = '#dc3545'; // Red
+                    checkLocationButton.style.backgroundColor = '#dc3545';
                     checkLocationButton.disabled = false; 
-                } else { // prompt or other
+                } else { 
                     checkLocationButton.textContent = 'Enable Location';
-                    checkLocationButton.style.backgroundColor = ''; // Default button color
+                    checkLocationButton.style.backgroundColor = '';
                     checkLocationButton.disabled = false;
                 }
             }
@@ -447,10 +464,9 @@
                                     }
                                 }, 3000);
                             }
-                            // Manually update button if permission was just granted via this explicit request
                             if (isExplicitRequest && checkLocationButton && typeof navigator.permissions !== 'undefined' && typeof navigator.permissions.query === 'function') {
                                 navigator.permissions.query({name:'geolocation'}).then(ps => updateCheckLocationButtonText(ps.state));
-                            } else if (isExplicitRequest && checkLocationButton) { // Fallback if Permissions API not there
+                            } else if (isExplicitRequest && checkLocationButton) {
                                 updateCheckLocationButtonText('granted');
                             }
 
@@ -476,10 +492,9 @@
                                 scanStatusElement.textContent = errorMessage;
                                 scanStatusElement.className = 'status-error';
                             }
-                             // Manually update button if permission was denied via this explicit request
                             if (isExplicitRequest && checkLocationButton && typeof navigator.permissions !== 'undefined' && typeof navigator.permissions.query === 'function') {
                                 navigator.permissions.query({name:'geolocation'}).then(ps => updateCheckLocationButtonText(ps.state));
-                            } else if (isExplicitRequest && checkLocationButton) { // Fallback
+                            } else if (isExplicitRequest && checkLocationButton) {
                                 updateCheckLocationButtonText('denied');
                             }
                             reject(new Error(errorMessage));
@@ -494,61 +509,55 @@
             }
 
             async function onScanSuccess(decodedText, decodedResult) {
-            if (!scanStatusElement || !scanSuccessOverlay) {
-                console.error("Missing status or overlay element for onScanSuccess.");
-                return;
-            }
-            const trimmedDecodedText = decodedText.trim();
+                if (!scanStatusElement || !scanSuccessOverlay) { // Ensure overlay is found
+                    console.error("Missing status or overlay element for onScanSuccess.");
+                    return;
+                }
+                const trimmedDecodedText = decodedText.trim();
 
-            if (scannedItems.some(item => item.text === trimmedDecodedText)) {
-                scanStatusElement.textContent = 'Text already scanned.';
+                if (scannedItems.some(item => item.text === trimmedDecodedText)) {
+                    scanStatusElement.textContent = 'Text already scanned.';
+                    scanStatusElement.className = 'status-info';
+                    return; // No success overlay for duplicates
+                }
+
+                console.log("Showing overlay..."); // DEBUG
+                scanSuccessOverlay.classList.add('visible');
+                
+                scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Getting location...`;
                 scanStatusElement.className = 'status-info';
-                // No success overlay for duplicates
-                return;
+
+                let geoData = { latitude: null, longitude: null, accuracy: null, geoError: null, timestamp: new Date().toISOString() };
+
+                try {
+                    const location = await fetchCurrentLocation();
+                    geoData.latitude = location.latitude;
+                    geoData.longitude = location.longitude;
+                    geoData.accuracy = location.accuracy;
+                    geoData.timestamp = location.timestamp;
+                    scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Location captured!`;
+                    scanStatusElement.className = 'status-success';
+                } catch (error) {
+                    geoData.geoError = error.message;
+                    scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Geo Error: ${error.message}`;
+                    scanStatusElement.className = 'status-error';
+                }
+                
+                scannedItems.push({ text: trimmedDecodedText, ...geoData });
+                updateScannedList();
+                
+                if (navigator.vibrate) navigator.vibrate(100);
+
+                setTimeout(() => {
+                    console.log("Hiding overlay..."); // DEBUG
+                    scanSuccessOverlay.classList.remove('visible');
+                }, 1200);
             }
-
-            // Show overlay immediately
-            scanSuccessOverlay.classList.add('visible');
-            
-            // Update main status for persistent info
-            scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Getting location...`;
-            scanStatusElement.className = 'status-info';
-
-
-            let geoData = { latitude: null, longitude: null, accuracy: null, geoError: null, timestamp: new Date().toISOString() };
-
-            try {
-                const location = await fetchCurrentLocation();
-                geoData.latitude = location.latitude;
-                geoData.longitude = location.longitude;
-                geoData.accuracy = location.accuracy;
-                geoData.timestamp = location.timestamp;
-                // Keep overlay, main status updates below
-                scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Location captured!`;
-                scanStatusElement.className = 'status-success'; // Main status success
-            } catch (error) {
-                geoData.geoError = error.message;
-                scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Geo Error: ${error.message}`;
-                scanStatusElement.className = 'status-error'; // Main status error
-            }
-            
-            scannedItems.push({ text: trimmedDecodedText, ...geoData });
-            updateScannedList();
-            
-            if (navigator.vibrate) {
-                navigator.vibrate(100); // Vibrate for 100ms
-            }
-
-            // Hide overlay after a short delay
-            setTimeout(() => {
-                scanSuccessOverlay.classList.remove('visible');
-            }, 1200); // Display for 1.2 seconds
-        }
 
             function onScanFailure(error) { /* console.warn(`QR error = ${error}`); */ }
 
             function startScanning() {
-                if (!scannedByInput || !startButton || !stopButton || !locationSelect || !scanStatusElement || !qrReaderElement) {
+                if (!scannedByInput || !startButton || !stopButton || !locationSelect || !scanStatusElement || !qrReaderDivForLibrary || !scannerViewportContainer ) {
                     console.error("Missing critical elements for startScanning.");
                     if (scanStatusElement) scanStatusElement.textContent = "UI Error, cannot start.";
                     return;
@@ -567,18 +576,16 @@
                 const config = { fps: 10, qrbox: { width: 250, height: 250 }, facingMode: "environment" };
                 
                 try {
-                    html5QrCode = new Html5Qrcode("qr-reader");
+                    // The library now targets the inner div 'qr-reader'
+                    html5QrCode = new Html5Qrcode("qr-reader"); // TARGETS THE INNER DIV ID
                     html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
                         .then(() => {
                             scanStatusElement.textContent = 'Scanner started. Point camera at QR code.';
                             scanStatusElement.className = 'status-info';
-
-                            // --- ADD THIS LINE ---
-                            if (qrReaderElement) {
-                                qrReaderElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            // Scroll the outer container into view
+                            if (scannerViewportContainer) {
+                                scannerViewportContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
                             }
-                            // --- END OF ADDITION ---
-
                         })
                         .catch(err => {
                             console.error("Failed to start scanner", err);
@@ -598,14 +605,15 @@
                 if (html5QrCode && html5QrCode.isScanning) {
                     html5QrCode.stop().catch(err => console.error("Error stopping scanner quietly", err));
                 }
-                // Reset UI regardless of stop success/failure
                 if(scanStatusElement && scanStatusElement.textContent.startsWith("Error starting scanner")) {
-                    // Don't overwrite critical error message with "Scanner stopped"
+                    // Keep error message
                 } else if (scanStatusElement) {
                      scanStatusElement.textContent = 'Scanner stopped.';
                      scanStatusElement.className = 'status-info';
                 }
-                if(qrReaderElement) qrReaderElement.innerHTML = "";
+                // IMPORTANT: Clear the inner div targeted by the library, not the overlay's parent
+                if(qrReaderDivForLibrary) qrReaderDivForLibrary.innerHTML = ""; 
+                
                 if(startButton) startButton.disabled = false;
                 if(stopButton) stopButton.disabled = true;
                 if(locationSelect) locationSelect.disabled = false;
@@ -614,9 +622,8 @@
             }
 
             async function sendToSalesforce() {
-                if (!scannedItems || !scannedByInput || !locationSelect || !dateScannedInput || !scanStatusElement) return;
-                // ... (rest of sendToSalesforce logic from previous correct version)
-                if (scannedItems.length === 0) {
+                // ... (This function remains the same as your last working version)
+                 if (scannedItems.length === 0) {
                     alert("No items to send.");
                     return;
                 }
@@ -651,29 +658,19 @@
 
             // --- Attach Event Listeners & Initial Calls ---
             if (startButton) startButton.addEventListener('click', startScanning);
-            else console.error("startButton not found for event listener!");
-
+            else console.error("startButton not found!");
             if (stopButton) stopButton.addEventListener('click', stopScanning);
-            else console.error("stopButton not found for event listener!");
-            
+            else console.error("stopButton not found!");
             if (sendButton) sendButton.addEventListener('click', sendToSalesforce);
-            else console.error("sendButton not found for event listener!");
-
+            else console.error("sendButton not found!");
             if (checkLocationButton) {
                 checkLocationButton.addEventListener('click', async () => {
                     checkLocationButton.disabled = true;
                     checkLocationButton.textContent = "Checking...";
                     try {
                         await requestGeolocationPermission(true);
-                    } catch(e) {
-                        console.log("Explicit geo request failed from button. Status message should reflect error.");
-                    }
-                    // Re-check and update button text regardless of try/catch outcome,
-                    // as permission might have changed or user needs clear feedback.
-                    // The requestGeolocationPermission itself tries to update button via Permissions API if available.
-                    // This is a fallback.
+                    } catch(e) { /* Handled in requestGeo */ }
                     if (!(navigator.permissions && typeof navigator.permissions.query === 'function')) {
-                        // If permissions API not available, enable button for another try after a delay
                          setTimeout(() => { if(checkLocationButton && checkLocationButton.textContent === "Checking...") {
                             checkLocationButton.disabled = false;
                             checkLocationButton.textContent = "Retry Location";
@@ -681,19 +678,16 @@
                     }
                 });
             } else {
-                console.error("checkLocationButton not found for event listener!");
+                console.error("checkLocationButton not found!");
             }
 
-            // Initial UI setup and checks
             if (scanStatusElement) {
                 scanStatusElement.textContent = 'Fill session info & click "Start Scanning".';
                 scanStatusElement.className = 'status-info';
             } else {
-                console.error("scanStatusElement not found for initial text!");
+                console.error("scanStatusElement not found!");
             }
-            
             checkInitialGeolocationPermission();
-
             try {
                 Html5Qrcode.getCameras().then(devices => {
                     if (!devices || !devices.length) {
@@ -716,9 +710,7 @@
                 if (scanStatusElement) scanStatusElement.textContent = "Camera check library error.";
                 if (startButton) startButton.disabled = true;
             }
-
-
-        }); // End of DOMContentLoaded
+        });
     </script>
 </body>
 </html>
