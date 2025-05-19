@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Salesforce QR Scanner</title>
     <style>
-        /* ... (Keep existing styles) ... */
+        /* ... (Keep existing styles from previous correct version) ... */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
@@ -127,6 +127,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            text-align: center; /* For multi-line messages */
         }
 
         .status-success {
@@ -147,7 +148,7 @@
             border: 1px solid #b8daff;
         }
 
-        #scanned-items-container { /* Renamed from scanned-urls-container */
+        #scanned-items-container {
             margin-top: 20px;
             text-align: left;
         }
@@ -158,7 +159,7 @@
             margin-bottom: 10px;
         }
 
-        #scanned-items-list { /* Renamed from scanned-urls-list */
+        #scanned-items-list {
             list-style-type: none;
             padding: 0;
             max-height: 200px;
@@ -190,6 +191,23 @@
             padding: 10px;
             border-radius: 5px;
             border-left: 4px solid #0070d2;
+        }
+         .instructions button { /* Style for the button inside instructions */
+            padding: 3px 8px;
+            font-size: 0.9em;
+            margin-left: 5px;
+            cursor: pointer;
+            background-color: #0070d2;
+            color: white;
+            border: none;
+            border-radius: 3px;
+        }
+        .instructions button:hover{
+            background-color: #005fb3;
+        }
+        .instructions button:disabled{
+            background-color: #ccc;
+            cursor: not-allowed;
         }
     </style>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -223,7 +241,7 @@
             <p><strong>Instructions:</strong></p>
             <ol>
                 <li>Fill in Session Information above.</li>
-                <li><button id="checkLocationButton" style="padding: 2px 5px; font-size: 0.9em;">Check/Enable Location</button> (Recommended before first scan)</li>
+                <li><button id="checkLocationButton">Check/Enable Location</button> (Recommended)</li>
                 <li>Click "Start Scanning" to activate the camera.</li>
                 <li>Allow camera and location permissions if prompted.</li>
                 <li>Point your camera at a QR code. Geolocation will be captured.</li>
@@ -234,7 +252,7 @@
         </div>
 
         <div id="qr-reader"></div>
-        <div id="scan-status" class="status-info">Awaiting scan...</div>
+        <div id="scan-status" class="status-info">Initializing...</div>
 
         <div class="controls">
             <button id="startButton">Start Scanning</button>
@@ -244,227 +262,389 @@
 
         <div id="scanned-items-container">
             <h2>Scanned Items:</h2>
-            <ul id="scanned-items-list">
-                <!-- Scanned items will be appended here -->
-            </ul>
+            <ul id="scanned-items-list"></ul>
         </div>
     </div>
 
-        <script>
-        // --- Global Variables & DOM Elements ---
-        // ... (keep existing variables) ...
-        const checkLocationButton = document.getElementById('checkLocationButton');
-
-        // --- Initialization ---
+    <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const today = new Date();
-            // ... (rest of date logic) ...
-            dateScannedInput.value = `${yyyy}-${mm}-${dd}`;
+            // --- DOM Element Variables ---
+            const locationSelect = document.getElementById('location');
+            const scannedByInput = document.getElementById('scannedBy');
+            const dateScannedInput = document.getElementById('dateScanned');
+            const qrReaderElement = document.getElementById('qr-reader');
+            const scanStatusElement = document.getElementById('scan-status');
+            const scannedItemsListElement = document.getElementById('scanned-items-list');
+            const startButton = document.getElementById('startButton');
+            const stopButton = document.getElementById('stopButton');
+            const sendButton = document.getElementById('sendButton');
+            const checkLocationButton = document.getElementById('checkLocationButton');
 
-            // Check initial geolocation permission status (optional, for better UX)
-            checkInitialGeolocationPermission();
-        });
+            // --- Global State ---
+            const scannedItems = [];
+            let html5QrCode = null;
 
-        // --- Helper Functions ---
-        // ... (updateScannedList remains the same) ...
+            // --- Initialization ---
+            try {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                if (dateScannedInput) {
+                    dateScannedInput.value = `${yyyy}-${mm}-${dd}`;
+                } else {
+                    console.error("dateScannedInput element not found!");
+                }
+            } catch (e) {
+                console.error("Error setting date:", e);
+                if (scanStatusElement) scanStatusElement.textContent = "Error initializing date.";
+            }
 
-        async function checkInitialGeolocationPermission() {
-            if (navigator.geolocation && typeof navigator.permissions !== 'undefined') {
-                try {
-                    const permissionStatus = await navigator.permissions.query({name:'geolocation'});
-                    console.log('Initial geolocation permission state:', permissionStatus.state);
-                    // You can update UI based on permissionStatus.state ('granted', 'prompt', 'denied')
-                    if (permissionStatus.state === 'denied') {
-                        scanStatusElement.innerHTML = 'Location permission is denied. Please enable it in browser settings. <button id="forceGeoRequestBtn" style="margin-left:5px;">Try Request</button>';
-                        scanStatusElement.className = 'status-error';
-                        const forceBtn = document.getElementById('forceGeoRequestBtn');
-                        if(forceBtn) forceBtn.onclick = () => requestGeolocationPermission(true);
-                    } else if (permissionStatus.state === 'granted') {
-                         // scanStatusElement.textContent = 'Location permission granted.';
-                         // scanStatusElement.className = 'status-success';
+
+            // --- Helper Function Definitions ---
+            function updateScannedList() {
+                if (!scannedItemsListElement) return;
+                scannedItemsListElement.innerHTML = '';
+                scannedItems.forEach(item => {
+                    const listItem = document.createElement('li');
+                    let geoInfo = '';
+                    if (item.geoError) {
+                        geoInfo = `<span class="item-geo">(Geo: ${item.geoError})</span>`;
+                    } else if (item.latitude !== null && item.longitude !== null) {
+                        geoInfo = `<span class="item-geo">(Lat: ${item.latitude.toFixed(5)}, Lon: ${item.longitude.toFixed(5)}, Acc: ${item.accuracy}m)</span>`;
                     }
-                    // Update button text based on permission status
-                    updateCheckLocationButtonText(permissionStatus.state);
+                    listItem.innerHTML = `${item.text} ${geoInfo}`;
+                    scannedItemsListElement.appendChild(listItem);
+                });
+                if (sendButton) sendButton.disabled = scannedItems.length === 0;
+            }
 
-
-                    permissionStatus.onchange = () => {
-                        console.log('Geolocation permission state changed to:', permissionStatus.state);
+            async function checkInitialGeolocationPermission() {
+                if (!checkLocationButton || !scanStatusElement) {
+                     console.error("Required elements for geo permission check not found (checkLocationButton or scanStatusElement).");
+                     if(checkLocationButton) checkLocationButton.textContent = "Geo Setup Error";
+                     return;
+                }
+                if (navigator.geolocation && typeof navigator.permissions !== 'undefined' && typeof navigator.permissions.query === 'function') {
+                    try {
+                        const permissionStatus = await navigator.permissions.query({name:'geolocation'});
                         updateCheckLocationButtonText(permissionStatus.state);
-                        if (permissionStatus.state === 'denied' && !document.getElementById('forceGeoRequestBtn')) {
-                            scanStatusElement.innerHTML = 'Location permission is denied. Please enable it in browser settings. <button id="forceGeoRequestBtn" style="margin-left:5px;">Try Request</button>';
-                            scanStatusElement.className = 'status-error';
-                            const forceBtn = document.getElementById('forceGeoRequestBtn');
-                            if(forceBtn) forceBtn.onclick = () => requestGeolocationPermission(true);
-                        } else if (permissionStatus.state === 'granted' && document.getElementById('forceGeoRequestBtn')) {
-                            if (scanStatusElement.innerHTML.includes('Location permission is denied')) {
+
+                        permissionStatus.onchange = () => {
+                            console.log('Geolocation permission state changed to:', permissionStatus.state);
+                            updateCheckLocationButtonText(permissionStatus.state);
+                            if (permissionStatus.state === 'denied' && !document.getElementById('forceGeoRequestBtnFromStatus')) {
+                                scanStatusElement.innerHTML = 'Location permission is denied. Please enable it in browser settings. <button id="forceGeoRequestBtnFromStatus" style="margin-left:5px; padding: 2px 5px;">Try Request</button>';
+                                scanStatusElement.className = 'status-error';
+                                const forceBtn = document.getElementById('forceGeoRequestBtnFromStatus');
+                                if(forceBtn) forceBtn.onclick = () => requestGeolocationPermission(true);
+                            } else if (permissionStatus.state === 'granted' && scanStatusElement.innerHTML.includes('Location permission is denied')) {
                                 scanStatusElement.textContent = 'Location permission granted.';
                                 scanStatusElement.className = 'status-success';
                             }
-                        }
-                    };
-                } catch (e) {
-                    console.warn("Permissions API not fully supported or error querying:", e);
-                    // Fallback if Permissions API fails
-                    checkLocationButton.textContent = "Enable Location (Click to try)";
+                        };
+                    } catch (e) {
+                        console.warn("Error querying geolocation permissions:", e);
+                        checkLocationButton.textContent = "Enable Location (Click)";
+                    }
+                } else {
+                    console.warn('Geolocation Permissions API not fully supported. Manual check needed.');
+                    checkLocationButton.textContent = "Check Location Manually";
+                    if (!navigator.geolocation) {
+                        checkLocationButton.disabled = true;
+                        checkLocationButton.textContent = "Location N/A";
+                         scanStatusElement.textContent = 'Geolocation is not supported by this browser.';
+                         scanStatusElement.className = 'status-error';
+                    }
                 }
-            } else {
-                console.warn('Geolocation or Permissions API not supported.');
-                checkLocationButton.disabled = true;
-                checkLocationButton.textContent = "Location N/A";
             }
-        }
-        
-        function updateCheckLocationButtonText(state) {
-            if (state === 'granted') {
-                checkLocationButton.textContent = 'Location Enabled';
-                checkLocationButton.style.color = 'green';
-                checkLocationButton.disabled = true;
-            } else if (state === 'denied') {
-                checkLocationButton.textContent = 'Location Denied (Check Settings)';
-                checkLocationButton.style.color = 'red';
-                checkLocationButton.disabled = false; // Allow click to try again / guide
-            } else { // prompt
-                checkLocationButton.textContent = 'Enable Location';
-                checkLocationButton.style.color = '';
-                checkLocationButton.disabled = false;
-            }
-        }
-
-
-        function requestGeolocationPermission(isExplicitRequest = false) {
-            return new Promise((resolve, reject) => {
-                if (!navigator.geolocation) {
-                    const errorMsg = 'Geolocation is not supported by your browser.';
-                    if (isExplicitRequest) alert(errorMsg);
-                    reject(new Error(errorMsg));
-                    return;
+            
+            function updateCheckLocationButtonText(state) {
+                if (!checkLocationButton) return;
+                if (state === 'granted') {
+                    checkLocationButton.textContent = 'Location Enabled';
+                    checkLocationButton.style.backgroundColor = '#28a745'; // Green
+                    checkLocationButton.disabled = true;
+                } else if (state === 'denied') {
+                    checkLocationButton.textContent = 'Location Denied';
+                    checkLocationButton.style.backgroundColor = '#dc3545'; // Red
+                    checkLocationButton.disabled = false; 
+                } else { // prompt or other
+                    checkLocationButton.textContent = 'Enable Location';
+                    checkLocationButton.style.backgroundColor = ''; // Default button color
+                    checkLocationButton.disabled = false;
                 }
-                // This call will trigger a prompt if permission is 'prompt' or re-request if previously denied (sometimes)
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        if (isExplicitRequest) {
-                            scanStatusElement.textContent = 'Location access granted!';
-                            scanStatusElement.className = 'status-success';
-                            setTimeout(() => { // Clear message after a bit
-                                if (scanStatusElement.textContent === 'Location access granted!') {
-                                    scanStatusElement.textContent = 'Fill session info & click "Start Scanning".';
-                                    scanStatusElement.className = 'status-info';
-                                }
-                            }, 3000);
-                        }
-                        resolve({
-                            latitude: position.coords.latitude,
-                            longitude: position.coords.longitude,
-                            accuracy: position.coords.accuracy,
-                            timestamp: new Date(position.timestamp).toISOString()
-                        });
-                    },
-                    (error) => {
-                        let errorMessage = 'Could not get location. ';
-                        switch(error.code) {
-                            case error.PERMISSION_DENIED:
-                                errorMessage += "Permission denied. Please enable location in browser/OS settings.";
-                                break;
-                            case error.POSITION_UNAVAILABLE:
-                                errorMessage += "Location information unavailable.";
-                                break;
-                            case error.TIMEOUT:
-                                errorMessage += "Request timed out.";
-                                break;
-                            default:
-                                errorMessage += "Unknown error."
-                        }
-                        if (isExplicitRequest) {
-                            scanStatusElement.textContent = errorMessage;
+            }
+
+            function requestGeolocationPermission(isExplicitRequest = false) {
+                return new Promise((resolve, reject) => {
+                    if (!navigator.geolocation) {
+                        const errorMsg = 'Geolocation is not supported by your browser.';
+                        if (isExplicitRequest && scanStatusElement) {
+                            scanStatusElement.textContent = errorMsg;
                             scanStatusElement.className = 'status-error';
                         }
-                        reject(new Error(errorMessage)); // Reject with the specific error
-                    },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                );
-            });
-        }
+                        reject(new Error(errorMsg));
+                        return;
+                    }
+                    
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            if (isExplicitRequest && scanStatusElement) {
+                                scanStatusElement.textContent = 'Location access granted!';
+                                scanStatusElement.className = 'status-success';
+                                setTimeout(() => {
+                                    if (scanStatusElement && scanStatusElement.textContent === 'Location access granted!') {
+                                        scanStatusElement.textContent = 'Ready to scan.';
+                                        scanStatusElement.className = 'status-info';
+                                    }
+                                }, 3000);
+                            }
+                            // Manually update button if permission was just granted via this explicit request
+                            if (isExplicitRequest && checkLocationButton && typeof navigator.permissions !== 'undefined' && typeof navigator.permissions.query === 'function') {
+                                navigator.permissions.query({name:'geolocation'}).then(ps => updateCheckLocationButtonText(ps.state));
+                            } else if (isExplicitRequest && checkLocationButton) { // Fallback if Permissions API not there
+                                updateCheckLocationButtonText('granted');
+                            }
 
-        // Rename getCurrentLocation to fetchCurrentLocation to avoid confusion
-        // as requestGeolocationPermission can also "get" location if permission is granted.
-        async function fetchCurrentLocation() {
-            // This function now assumes permission might have been granted,
-            // or it will trigger a prompt if status is 'prompt'.
-            // If 'denied', it will likely fail silently or with an error handled by the promise.
-            return requestGeolocationPermission(false); // false = not an explicit user button click
-        }
-
-        // --- Scan Logic ---
-        async function onScanSuccess(decodedText, decodedResult) {
-            console.log("Raw decodedText from QR:", `"${decodedText}"`);
-            const trimmedDecodedText = decodedText.trim();
-
-            if (scannedItems.some(item => item.text === trimmedDecodedText)) {
-                scanStatusElement.textContent = 'Text already scanned.';
-                scanStatusElement.className = 'status-info';
-                return;
+                            resolve({
+                                latitude: position.coords.latitude,
+                                longitude: position.coords.longitude,
+                                accuracy: position.coords.accuracy,
+                                timestamp: new Date(position.timestamp).toISOString()
+                            });
+                        },
+                        (error) => {
+                            let errorMessage = 'Could not get location. ';
+                            switch(error.code) {
+                                case error.PERMISSION_DENIED:
+                                    errorMessage += "Permission denied.";
+                                    if (isExplicitRequest) errorMessage += " Please enable location in browser/OS settings.";
+                                    break;
+                                case error.POSITION_UNAVAILABLE: errorMessage += "Information unavailable."; break;
+                                case error.TIMEOUT: errorMessage += "Request timed out."; break;
+                                default: errorMessage += "Unknown error."; break;
+                            }
+                            if (isExplicitRequest && scanStatusElement) {
+                                scanStatusElement.textContent = errorMessage;
+                                scanStatusElement.className = 'status-error';
+                            }
+                             // Manually update button if permission was denied via this explicit request
+                            if (isExplicitRequest && checkLocationButton && typeof navigator.permissions !== 'undefined' && typeof navigator.permissions.query === 'function') {
+                                navigator.permissions.query({name:'geolocation'}).then(ps => updateCheckLocationButtonText(ps.state));
+                            } else if (isExplicitRequest && checkLocationButton) { // Fallback
+                                updateCheckLocationButtonText('denied');
+                            }
+                            reject(new Error(errorMessage));
+                        },
+                        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    );
+                });
             }
-
-            scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Getting location...`;
-            scanStatusElement.className = 'status-info';
-
-            let geoData = { latitude: null, longitude: null, accuracy: null, geoError: null, timestamp: new Date().toISOString() };
-
-            try {
-                const location = await fetchCurrentLocation(); // Use the renamed function
-                geoData.latitude = location.latitude;
-                geoData.longitude = location.longitude;
-                geoData.accuracy = location.accuracy;
-                geoData.timestamp = location.timestamp;
-                scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Location captured!`;
-                scanStatusElement.className = 'status-success';
-            } catch (error) {
-                geoData.geoError = error.message; // This will now contain the detailed error message
-                scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Geo Error: ${error.message}`;
-                scanStatusElement.className = 'status-error';
-                console.warn(`Geolocation error for "${trimmedDecodedText}": ${error.message}`);
-            }
-
-            scannedItems.push({
-                text: trimmedDecodedText,
-                ...geoData
-            });
-            updateScannedList();
             
-            if (navigator.vibrate) {
-                navigator.vibrate(100);
+            async function fetchCurrentLocation() {
+                return requestGeolocationPermission(false);
             }
-        }
 
-        // ... (onScanFailure, startScanning, stopScanning, sendToSalesforce remain largely the same) ...
-        // Make sure startScanning still checks for scannedByInput.value
+            async function onScanSuccess(decodedText, decodedResult) {
+                if (!scanStatusElement) return;
+                const trimmedDecodedText = decodedText.trim();
 
-        // --- Event Listeners ---
-        // ... (existing listeners for start, stop, send buttons) ...
-        checkLocationButton.addEventListener('click', async () => {
-            checkLocationButton.disabled = true;
-            checkLocationButton.textContent = "Checking...";
-            try {
-                await requestGeolocationPermission(true); // true = this is an explicit user request
-                // Permission state will be updated by the 'onchange' listener in checkInitialGeolocationPermission
-            } catch(e) {
-                // Error already handled in requestGeolocationPermission, but we can re-enable button here
-                // The onchange handler in checkInitialGeolocationPermission should update the button text appropriately
-                console.log("Explicit geo request failed, button state will be updated by permission change listener.");
+                if (scannedItems.some(item => item.text === trimmedDecodedText)) {
+                    scanStatusElement.textContent = 'Text already scanned.';
+                    scanStatusElement.className = 'status-info';
+                    return;
+                }
+
+                scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Getting location...`;
+                scanStatusElement.className = 'status-info';
+
+                let geoData = { latitude: null, longitude: null, accuracy: null, geoError: null, timestamp: new Date().toISOString() };
+
+                try {
+                    const location = await fetchCurrentLocation();
+                    geoData.latitude = location.latitude;
+                    geoData.longitude = location.longitude;
+                    geoData.accuracy = location.accuracy;
+                    geoData.timestamp = location.timestamp;
+                    scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Location captured!`;
+                    scanStatusElement.className = 'status-success';
+                } catch (error) {
+                    geoData.geoError = error.message;
+                    scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Geo Error: ${error.message}`;
+                    scanStatusElement.className = 'status-error';
+                }
+                scannedItems.push({ text: trimmedDecodedText, ...geoData });
+                updateScannedList();
+                if (navigator.vibrate) navigator.vibrate(100);
             }
-            // The button text/state will be updated by the permissionStatus.onchange event.
-            // If onchange isn't supported or fails, we might need a fallback to re-enable here.
-            if (navigator.permissions && typeof navigator.permissions.query === 'function') {
-                 const ps = await navigator.permissions.query({name:'geolocation'});
-                 updateCheckLocationButtonText(ps.state); // Manual update if onchange is slow or missed
+
+            function onScanFailure(error) { /* console.warn(`QR error = ${error}`); */ }
+
+            function startScanning() {
+                if (!scannedByInput || !startButton || !stopButton || !locationSelect || !scanStatusElement || !qrReaderElement) {
+                    console.error("Missing critical elements for startScanning.");
+                    if (scanStatusElement) scanStatusElement.textContent = "UI Error, cannot start.";
+                    return;
+                }
+                if (!scannedByInput.value.trim()) {
+                    alert("Please enter your name in 'Scanned By' field.");
+                    scannedByInput.focus();
+                    return;
+                }
+                startButton.disabled = true;
+                stopButton.disabled = false;
+                locationSelect.disabled = true;
+                scannedByInput.disabled = true;
+                scanStatusElement.textContent = 'Initializing scanner... Requesting camera...';
+                scanStatusElement.className = 'status-info';
+                const config = { fps: 10, qrbox: { width: 250, height: 250 }, facingMode: "environment" };
+                try {
+                    html5QrCode = new Html5Qrcode("qr-reader"); // Use ID string
+                    html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
+                        .then(() => {
+                            scanStatusElement.textContent = 'Scanner started. Point camera at QR code.';
+                            scanStatusElement.className = 'status-info';
+                        })
+                        .catch(err => {
+                            console.error("Failed to start scanner", err);
+                            scanStatusElement.textContent = `Error starting scanner: ${err.message}.`;
+                            scanStatusElement.className = 'status-error';
+                            stopScanning();
+                        });
+                } catch (e) {
+                     console.error("Error creating Html5Qrcode instance:", e);
+                     scanStatusElement.textContent = `Scanner lib error: ${e.message}.`;
+                     scanStatusElement.className = 'status-error';
+                     stopScanning();
+                }
+            }
+
+            function stopScanning() {
+                if (html5QrCode && html5QrCode.isScanning) {
+                    html5QrCode.stop().catch(err => console.error("Error stopping scanner quietly", err));
+                }
+                // Reset UI regardless of stop success/failure
+                if(scanStatusElement && scanStatusElement.textContent.startsWith("Error starting scanner")) {
+                    // Don't overwrite critical error message with "Scanner stopped"
+                } else if (scanStatusElement) {
+                     scanStatusElement.textContent = 'Scanner stopped.';
+                     scanStatusElement.className = 'status-info';
+                }
+                if(qrReaderElement) qrReaderElement.innerHTML = "";
+                if(startButton) startButton.disabled = false;
+                if(stopButton) stopButton.disabled = true;
+                if(locationSelect) locationSelect.disabled = false;
+                if(scannedByInput) scannedByInput.disabled = false;
+                html5QrCode = null;
+            }
+
+            async function sendToSalesforce() {
+                if (!scannedItems || !scannedByInput || !locationSelect || !dateScannedInput || !scanStatusElement) return;
+                // ... (rest of sendToSalesforce logic from previous correct version)
+                if (scannedItems.length === 0) {
+                    alert("No items to send.");
+                    return;
+                }
+                if (!scannedByInput.value.trim()) {
+                    alert("Please ensure 'Scanned By' field is filled.");
+                    scannedByInput.focus();
+                    return;
+                }
+
+                const payload = {
+                    sessionInfo: {
+                        location: locationSelect.value,
+                        scannedBy: scannedByInput.value.trim(),
+                        dateScanned: dateScannedInput.value
+                    },
+                    scannedItems: scannedItems
+                };
+                const jsonData = JSON.stringify(payload, null, 2);
+
+                console.log("Payload to send to Salesforce:", jsonData);
+                scanStatusElement.textContent = 'Preparing data for Salesforce...';
+                scanStatusElement.className = 'status-info';
+
+                scanStatusElement.textContent = 'Simulating send... Check console for JSON.';
+                scanStatusElement.className = 'status-info';
+                setTimeout(() => {
+                    alert("Simulated Send Complete!\n\nPayload:\n" + jsonData + "\n\nCheck console. Implement actual Salesforce call.");
+                    scanStatusElement.textContent = 'Simulated send complete. Data logged to console.';
+                    scanStatusElement.className = 'status-success';
+                }, 1500);
+            }
+
+            // --- Attach Event Listeners & Initial Calls ---
+            if (startButton) startButton.addEventListener('click', startScanning);
+            else console.error("startButton not found for event listener!");
+
+            if (stopButton) stopButton.addEventListener('click', stopScanning);
+            else console.error("stopButton not found for event listener!");
+            
+            if (sendButton) sendButton.addEventListener('click', sendToSalesforce);
+            else console.error("sendButton not found for event listener!");
+
+            if (checkLocationButton) {
+                checkLocationButton.addEventListener('click', async () => {
+                    checkLocationButton.disabled = true;
+                    checkLocationButton.textContent = "Checking...";
+                    try {
+                        await requestGeolocationPermission(true);
+                    } catch(e) {
+                        console.log("Explicit geo request failed from button. Status message should reflect error.");
+                    }
+                    // Re-check and update button text regardless of try/catch outcome,
+                    // as permission might have changed or user needs clear feedback.
+                    // The requestGeolocationPermission itself tries to update button via Permissions API if available.
+                    // This is a fallback.
+                    if (!(navigator.permissions && typeof navigator.permissions.query === 'function')) {
+                        // If permissions API not available, enable button for another try after a delay
+                         setTimeout(() => { if(checkLocationButton && checkLocationButton.textContent === "Checking...") {
+                            checkLocationButton.disabled = false;
+                            checkLocationButton.textContent = "Retry Location";
+                         } }, 2000);
+                    }
+                });
             } else {
-                checkLocationButton.disabled = false; // Fallback
+                console.error("checkLocationButton not found for event listener!");
             }
-        });
 
-        // Initial Page Load State
-        // scanStatusElement.textContent = 'Fill session info & click "Start Scanning".'; // Moved to be set after initial geo check
-        // ... (Html5Qrcode.getCameras() check remains the same)
+            // Initial UI setup and checks
+            if (scanStatusElement) {
+                scanStatusElement.textContent = 'Fill session info & click "Start Scanning".';
+                scanStatusElement.className = 'status-info';
+            } else {
+                console.error("scanStatusElement not found for initial text!");
+            }
+            
+            checkInitialGeolocationPermission();
+
+            try {
+                Html5Qrcode.getCameras().then(devices => {
+                    if (!devices || !devices.length) {
+                        if (scanStatusElement) {
+                            scanStatusElement.textContent = 'No cameras found. Ensure camera and permissions.';
+                            scanStatusElement.className = 'status-error';
+                        }
+                        if (startButton) startButton.disabled = true;
+                    }
+                }).catch(err => {
+                    if (scanStatusElement) {
+                        scanStatusElement.textContent = 'Could not access cameras. Check permissions.';
+                        scanStatusElement.className = 'status-error';
+                    }
+                    if (startButton) startButton.disabled = true;
+                    console.error("Error getting cameras", err);
+                });
+            } catch (e) {
+                console.error("Error during Html5Qrcode.getCameras():", e);
+                if (scanStatusElement) scanStatusElement.textContent = "Camera check library error.";
+                if (startButton) startButton.disabled = true;
+            }
+
+
+        }); // End of DOMContentLoaded
     </script>
 </body>
 </html>
