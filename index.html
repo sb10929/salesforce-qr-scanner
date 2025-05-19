@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salesforce QR Scanner</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #0070d2; /* Salesforce Blue */
+            margin-bottom: 20px;
+        }
+
+        #qr-reader {
+            width: 100%;
+            max-width: 400px; /* Or adjust as needed */
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin: 20px auto;
+            overflow: hidden; /* Important for camera view */
+        }
+        
+        #qr-reader__dashboard_section_csr span button {
+            background-color: #0070d2 !important;
+            color: white !important;
+            border: none !important;
+            padding: 8px 15px !important;
+            border-radius: 4px !important;
+            cursor: pointer !important;
+        }
+
+        #qr-reader__dashboard_section_csr span button:hover {
+            background-color: #005fb3 !important;
+        }
+
+
+        .controls button {
+            background-color: #0070d2;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .controls button:hover {
+            background-color: #005fb3;
+        }
+
+        .controls button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        #scan-status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .status-success {
+            background-color: #e6ffed;
+            color: #28a745;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background-color: #ffebee;
+            color: #dc3545;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-info {
+            background-color: #e7f3fe;
+            color: #007bff;
+            border: 1px solid #b8daff;
+        }
+
+        #scanned-urls-container {
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        #scanned-urls-container h2 {
+            font-size: 18px;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        #scanned-urls-list {
+            list-style-type: none;
+            padding: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        #scanned-urls-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+            word-break: break-all;
+            font-size: 14px;
+        }
+        #scanned-urls-list li:last-child {
+            border-bottom: none;
+        }
+        .instructions {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 20px;
+            background-color: #e7f3fe;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #0070d2;
+        }
+    </style>
+    <!-- Include the html5-qrcode library -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Salesforce Trailer QR Scanner</h1>
+
+        <div class="instructions">
+            <p><strong>Instructions:</strong></p>
+            <ol>
+                <li>Click "Start Scanning" to activate the camera.</li>
+                <li>Allow camera permissions if prompted.</li>
+                <li>Point your camera at a QR code.</li>
+                <li>Scanned URLs will appear in the list below.</li>
+                <li>Click "Stop Scanning" to pause.</li>
+                <li>Click "Send to Salesforce" when done.</li>
+            </ol>
+        </div>
+
+        <div id="qr-reader"></div>
+        <div id="scan-status" class="status-info">Awaiting scan...</div>
+
+        <div class="controls">
+            <button id="startButton">Start Scanning</button>
+            <button id="stopButton" disabled>Stop Scanning</button>
+            <button id="sendButton" disabled>Send to Salesforce</button>
+        </div>
+
+        <div id="scanned-urls-container">
+            <h2>Scanned URLs:</h2>
+            <ul id="scanned-urls-list">
+                <!-- Scanned URLs will be appended here -->
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const scannedUrls = [];
+        let html5QrCode = null;
+
+        const qrReaderElement = document.getElementById('qr-reader');
+        const scanStatusElement = document.getElementById('scan-status');
+        const scannedUrlsListElement = document.getElementById('scanned-urls-list');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const sendButton = document.getElementById('sendButton');
+
+        function updateScannedList() {
+            scannedUrlsListElement.innerHTML = ''; // Clear existing list
+            scannedUrls.forEach(url => {
+                const listItem = document.createElement('li');
+                listItem.textContent = url;
+                scannedUrlsListElement.appendChild(listItem);
+            });
+            sendButton.disabled = scannedUrls.length === 0;
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            // Basic URL validation (you might want a more robust regex)
+            if (decodedText.startsWith('http://') || decodedText.startsWith('https://')) {
+                if (!scannedUrls.includes(decodedText)) {
+                    scannedUrls.push(decodedText);
+                    updateScannedList();
+                    scanStatusElement.textContent = `Scanned: ${decodedText.substring(0, 30)}...`;
+                    scanStatusElement.className = 'status-success';
+                    console.log(`Scan result: ${decodedText}`, decodedResult);
+                    
+                    // Optional: Vibrate on success (mobile only)
+                    if (navigator.vibrate) {
+                        navigator.vibrate(100); // Vibrate for 100ms
+                    }
+                } else {
+                    scanStatusElement.textContent = 'URL already scanned.';
+                    scanStatusElement.className = 'status-info';
+                }
+            } else {
+                scanStatusElement.textContent = 'Scanned content is not a valid URL.';
+                scanStatusElement.className = 'status-error';
+            }
+            // To continuously scan, don't stop the scanner here.
+            // html5QrCode.stop().then(ignore => {}).catch(err => console.error("Failed to stop scanner", err));
+        }
+
+        function onScanFailure(error) {
+            // Handle scan failure, usually means no QR code detected in the frame.
+            // Don't display every "failure" as it can be noisy.
+            // console.warn(`QR error = ${error}`);
+            // scanStatusElement.textContent = `Scan Error: ${error}`;
+            // scanStatusElement.className = 'status-error';
+        }
+
+        function startScanning() {
+            startButton.disabled = true;
+            stopButton.disabled = false;
+            scanStatusElement.textContent = 'Initializing scanner... Requesting camera...';
+            scanStatusElement.className = 'status-info';
+
+            // If you want to prefer front camera
+            // const config = { fps: 10, qrbox: { width: 250, height: 250 }, facingMode: "user" };
+            // If you want to prefer back camera
+            const config = { fps: 10, qrbox: { width: 250, height: 250 }, facingMode: "environment" };
+
+
+            html5QrCode = new Html5Qrcode("qr-reader");
+            html5QrCode.start(
+                { facingMode: "environment" }, // Or 'user' for front camera. {deviceId: {exact: cameraId}} for specific
+                config,
+                onScanSuccess,
+                onScanFailure
+            ).then(() => {
+                 scanStatusElement.textContent = 'Scanner started. Point camera at QR code.';
+                 scanStatusElement.className = 'status-info';
+            }).catch(err => {
+                console.error("Failed to start scanner", err);
+                scanStatusElement.textContent = `Error starting scanner: ${err.message}. Ensure camera access is allowed.`;
+                scanStatusElement.className = 'status-error';
+                stopScanning(); // Reset buttons if start fails
+            });
+        }
+
+        function stopScanning() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop()
+                    .then(ignore => {
+                        scanStatusElement.textContent = 'Scanner stopped.';
+                        scanStatusElement.className = 'status-info';
+                        console.log("QR Code scanning stopped.");
+                    })
+                    .catch(err => {
+                        console.error("Failed to stop scanner", err);
+                        scanStatusElement.textContent = 'Error stopping scanner.';
+                        scanStatusElement.className = 'status-error';
+                    })
+                    .finally(() => {
+                        html5QrCode = null; // Clear the instance
+                        qrReaderElement.innerHTML = ""; // Clear the video feed display
+                    });
+            }
+            startButton.disabled = false;
+            stopButton.disabled = true;
+        }
+
+        async function sendToSalesforce() {
+            if (scannedUrls.length === 0) {
+                alert("No URLs to send.");
+                return;
+            }
+
+            const payload = {
+                scannedUrls: scannedUrls
+            };
+            const jsonData = JSON.stringify(payload, null, 2);
+
+            console.log("Payload to send to Salesforce:", jsonData);
+            scanStatusElement.textContent = 'Preparing data for Salesforce...';
+            scanStatusElement.className = 'status-info';
+
+            // --- !!! IMPORTANT: Salesforce Integration Point !!! ---
+            // This is where you'd make the actual API call to Salesforce.
+            // For now, we'll simulate it and show how to prepare.
+
+            // OPTION 1: Display JSON for manual copy-paste (simplest for demo)
+            // alert("Data to send to Salesforce (copy this):\n\n" + jsonData);
+            // scanStatusElement.textContent = 'Data ready. See alert or console.';
+            // scanStatusElement.className = 'status-success';
+
+            // OPTION 2: Use Fetch API to send to a backend/middleware or Salesforce directly (if configured)
+            // This requires a backend endpoint or a Salesforce REST API endpoint that can accept this data.
+            // And proper CORS configuration on the Salesforce side if calling directly.
+            try {
+                // Replace 'YOUR_SALESFORCE_ENDPOINT_OR_MIDDLEWARE_URL' with your actual endpoint
+                // const response = await fetch('YOUR_SALESFORCE_ENDPOINT_OR_MIDDLEWARE_URL', {
+                //     method: 'POST',
+                //     headers: {
+                //         'Content-Type': 'application/json',
+                //         // 'Authorization': 'Bearer YOUR_ACCESS_TOKEN' // If required
+                //     },
+                //     body: jsonData
+                // });
+
+                // if (!response.ok) {
+                //     const errorData = await response.text();
+                //     throw new Error(`Salesforce API Error: ${response.status} ${errorData}`);
+                // }
+                // const result = await response.json();
+                // console.log('Salesforce response:', result);
+                // scanStatusElement.textContent = 'Data successfully sent to Salesforce!';
+                // scanStatusElement.className = 'status-success';
+                // scannedUrls.length = 0; // Clear the list after successful send
+                // updateScannedList();
+
+
+                // --- SIMULATION for this example ---
+                scanStatusElement.textContent = 'Simulating send... Check console for JSON. (See code comments for actual integration)';
+                scanStatusElement.className = 'status-info';
+                setTimeout(() => {
+                     alert("Simulated Send Complete!\n\nPayload:\n" + jsonData + "\n\nCheck console for details. Implement actual Salesforce call in sendToSalesforce function.");
+                     scanStatusElement.textContent = 'Simulated send complete. Data logged to console.';
+                     scanStatusElement.className = 'status-success';
+                     // scannedUrls.length = 0; // Optionally clear list after simulated send
+                     // updateScannedList();
+                }, 1500);
+                // --- END SIMULATION ---
+
+            } catch (error) {
+                console.error('Error sending to Salesforce:', error);
+                scanStatusElement.textContent = `Error: ${error.message}`;
+                scanStatusElement.className = 'status-error';
+                alert(`Error sending data: ${error.message}`);
+            }
+        }
+
+        startButton.addEventListener('click', startScanning);
+        stopButton.addEventListener('click', stopScanning);
+        sendButton.addEventListener('click', sendToSalesforce);
+
+        // Initial state
+        scanStatusElement.textContent = 'Click "Start Scanning" to begin.';
+        
+        // Check for camera permissions and availability early (optional good UX)
+        Html5Qrcode.getCameras().then(devices => {
+            if (devices && devices.length) {
+                // var cameraId = devices[0].id; // Use the first camera
+                console.log("Cameras available:", devices);
+            } else {
+                scanStatusElement.textContent = 'No cameras found. Please ensure a camera is connected and permissions are granted.';
+                scanStatusElement.className = 'status-error';
+                startButton.disabled = true;
+            }
+        }).catch(err => {
+            scanStatusElement.textContent = 'Could not access cameras. Please check permissions.';
+            scanStatusElement.className = 'status-error';
+            startButton.disabled = true;
+            console.error("Error getting cameras", err);
+        });
+
+    </script>
+</body>
+</html>
