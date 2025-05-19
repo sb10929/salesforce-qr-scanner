@@ -325,6 +325,7 @@
             const stopButton = document.getElementById('stopButton');
             const sendButton = document.getElementById('sendButton');
             const checkLocationButton = document.getElementById('checkLocationButton');
+            const scanSuccessOverlay = document.getElementById('scan-success-overlay');
 
             // --- Global State ---
             const scannedItems = [];
@@ -493,37 +494,56 @@
             }
 
             async function onScanSuccess(decodedText, decodedResult) {
-                if (!scanStatusElement) return;
-                const trimmedDecodedText = decodedText.trim();
-
-                if (scannedItems.some(item => item.text === trimmedDecodedText)) {
-                    scanStatusElement.textContent = 'Text already scanned.';
-                    scanStatusElement.className = 'status-info';
-                    return;
-                }
-
-                scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Getting location...`;
-                scanStatusElement.className = 'status-info';
-
-                let geoData = { latitude: null, longitude: null, accuracy: null, geoError: null, timestamp: new Date().toISOString() };
-
-                try {
-                    const location = await fetchCurrentLocation();
-                    geoData.latitude = location.latitude;
-                    geoData.longitude = location.longitude;
-                    geoData.accuracy = location.accuracy;
-                    geoData.timestamp = location.timestamp;
-                    scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Location captured!`;
-                    scanStatusElement.className = 'status-success';
-                } catch (error) {
-                    geoData.geoError = error.message;
-                    scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Geo Error: ${error.message}`;
-                    scanStatusElement.className = 'status-error';
-                }
-                scannedItems.push({ text: trimmedDecodedText, ...geoData });
-                updateScannedList();
-                if (navigator.vibrate) navigator.vibrate(100);
+            if (!scanStatusElement || !scanSuccessOverlay) {
+                console.error("Missing status or overlay element for onScanSuccess.");
+                return;
             }
+            const trimmedDecodedText = decodedText.trim();
+
+            if (scannedItems.some(item => item.text === trimmedDecodedText)) {
+                scanStatusElement.textContent = 'Text already scanned.';
+                scanStatusElement.className = 'status-info';
+                // No success overlay for duplicates
+                return;
+            }
+
+            // Show overlay immediately
+            scanSuccessOverlay.classList.add('visible');
+            
+            // Update main status for persistent info
+            scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Getting location...`;
+            scanStatusElement.className = 'status-info';
+
+
+            let geoData = { latitude: null, longitude: null, accuracy: null, geoError: null, timestamp: new Date().toISOString() };
+
+            try {
+                const location = await fetchCurrentLocation();
+                geoData.latitude = location.latitude;
+                geoData.longitude = location.longitude;
+                geoData.accuracy = location.accuracy;
+                geoData.timestamp = location.timestamp;
+                // Keep overlay, main status updates below
+                scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Location captured!`;
+                scanStatusElement.className = 'status-success'; // Main status success
+            } catch (error) {
+                geoData.geoError = error.message;
+                scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Geo Error: ${error.message}`;
+                scanStatusElement.className = 'status-error'; // Main status error
+            }
+            
+            scannedItems.push({ text: trimmedDecodedText, ...geoData });
+            updateScannedList();
+            
+            if (navigator.vibrate) {
+                navigator.vibrate(100); // Vibrate for 100ms
+            }
+
+            // Hide overlay after a short delay
+            setTimeout(() => {
+                scanSuccessOverlay.classList.remove('visible');
+            }, 1200); // Display for 1.2 seconds
+        }
 
             function onScanFailure(error) { /* console.warn(`QR error = ${error}`); */ }
 
