@@ -102,7 +102,7 @@
             border: 1px solid #b8daff;
         }
 
-        #scanned-urls-container {
+        #scanned-urls-container { /* Keeping name generic, but it now stores any text */
             margin-top: 20px;
             text-align: left;
         }
@@ -147,7 +147,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Salesforce Trailer QR Scanner</h1>
+        <h1>Salesforce QR Scanner</h1>
 
         <div class="instructions">
             <p><strong>Instructions:</strong></p>
@@ -155,7 +155,7 @@
                 <li>Click "Start Scanning" to activate the camera.</li>
                 <li>Allow camera permissions if prompted.</li>
                 <li>Point your camera at a QR code.</li>
-                <li>Scanned URLs will appear in the list below.</li>
+                <li>Scanned text will appear in the list below.</li>
                 <li>Click "Stop Scanning" to pause.</li>
                 <li>Click "Send to Salesforce" when done.</li>
             </ol>
@@ -171,15 +171,15 @@
         </div>
 
         <div id="scanned-urls-container">
-            <h2>Scanned URLs:</h2>
+            <h2>Scanned Text:</h2> <!-- Changed H2 slightly for clarity -->
             <ul id="scanned-urls-list">
-                <!-- Scanned URLs will be appended here -->
+                <!-- Scanned text will be appended here -->
             </ul>
         </div>
     </div>
 
     <script>
-        const scannedUrls = [];
+        const scannedUrls = []; // Renaming this variable might be good, e.g., scannedTexts, but for now keeping it for minimal changes
         let html5QrCode = null;
 
         const qrReaderElement = document.getElementById('qr-reader');
@@ -191,55 +191,47 @@
 
         function updateScannedList() {
             scannedUrlsListElement.innerHTML = ''; // Clear existing list
-            scannedUrls.forEach(url => {
+            scannedUrls.forEach(text => { // Changed 'url' to 'text' for clarity in this scope
                 const listItem = document.createElement('li');
-                listItem.textContent = url;
+                listItem.textContent = text;
                 scannedUrlsListElement.appendChild(listItem);
             });
             sendButton.disabled = scannedUrls.length === 0;
         }
 
-                function onScanSuccess(decodedText, decodedResult) {
+        // --- MODIFIED onScanSuccess ---
+        function onScanSuccess(decodedText, decodedResult) {
             console.log("Raw decodedText from QR:", `"${decodedText}"`); // Log the raw text
             console.log("Decoded result object:", decodedResult);
 
-            // Trim whitespace from the decoded text
+            // Trim whitespace from the decoded text for consistency
             const trimmedDecodedText = decodedText.trim();
-            console.log("Trimmed decodedText:", `"${trimmedDecodedText}"`);
+            console.log("Trimmed decodedText (to be added):", `"${trimmedDecodedText}"`);
 
-            // Basic URL validation (case-insensitive and handles common Salesforce URL patterns)
-            // Convert to lowercase for startsWith check to make it case-insensitive
-            const lowercasedText = trimmedDecodedText.toLowerCase();
-
-            if (lowercasedText.startsWith('http://') || lowercasedText.startsWith('https://')) {
-                // Check if it's already scanned using the trimmed version
-                if (!scannedUrls.includes(trimmedDecodedText)) {
-                    scannedUrls.push(trimmedDecodedText); // Store the trimmed version
-                    updateScannedList();
-                    scanStatusElement.textContent = `Scanned: ${trimmedDecodedText.substring(0, 30)}...`;
-                    scanStatusElement.className = 'status-success';
-                    console.log(`Scan result (added to list): ${trimmedDecodedText}`);
-                    
-                    if (navigator.vibrate) {
-                        navigator.vibrate(100);
-                    }
-                } else {
-                    scanStatusElement.textContent = 'URL already scanned.';
-                    scanStatusElement.className = 'status-info';
+            // Check if this text has already been scanned
+            if (!scannedUrls.includes(trimmedDecodedText)) {
+                scannedUrls.push(trimmedDecodedText); // Add the trimmed text to the list
+                updateScannedList();
+                scanStatusElement.textContent = `Scanned: ${trimmedDecodedText.substring(0, 40)}...`; // Show a preview
+                scanStatusElement.className = 'status-success';
+                console.log(`Scan result added to list: "${trimmedDecodedText}"`);
+                
+                // Optional: Vibrate on success (mobile only)
+                if (navigator.vibrate) {
+                    navigator.vibrate(100); // Vibrate for 100ms
                 }
             } else {
-                scanStatusElement.textContent = `Invalid URL: "${trimmedDecodedText.substring(0,50)}..." Expected http:// or https://`;
-                scanStatusElement.className = 'status-error';
-                console.warn(`Invalid URL detected: Original='${decodedText}', Trimmed='${trimmedDecodedText}'`);
+                scanStatusElement.textContent = 'Text already scanned.';
+                scanStatusElement.className = 'status-info';
+                console.log(`Duplicate scan ignored: "${trimmedDecodedText}"`);
             }
         }
+        // --- END MODIFIED onScanSuccess ---
+
 
         function onScanFailure(error) {
             // Handle scan failure, usually means no QR code detected in the frame.
-            // Don't display every "failure" as it can be noisy.
             // console.warn(`QR error = ${error}`);
-            // scanStatusElement.textContent = `Scan Error: ${error}`;
-            // scanStatusElement.className = 'status-error';
         }
 
         function startScanning() {
@@ -248,15 +240,11 @@
             scanStatusElement.textContent = 'Initializing scanner... Requesting camera...';
             scanStatusElement.className = 'status-info';
 
-            // If you want to prefer front camera
-            // const config = { fps: 10, qrbox: { width: 250, height: 250 }, facingMode: "user" };
-            // If you want to prefer back camera
             const config = { fps: 10, qrbox: { width: 250, height: 250 }, facingMode: "environment" };
-
 
             html5QrCode = new Html5Qrcode("qr-reader");
             html5QrCode.start(
-                { facingMode: "environment" }, // Or 'user' for front camera. {deviceId: {exact: cameraId}} for specific
+                { facingMode: "environment" }, 
                 config,
                 onScanSuccess,
                 onScanFailure
@@ -267,7 +255,7 @@
                 console.error("Failed to start scanner", err);
                 scanStatusElement.textContent = `Error starting scanner: ${err.message}. Ensure camera access is allowed.`;
                 scanStatusElement.className = 'status-error';
-                stopScanning(); // Reset buttons if start fails
+                stopScanning(); 
             });
         }
 
@@ -285,8 +273,8 @@
                         scanStatusElement.className = 'status-error';
                     })
                     .finally(() => {
-                        html5QrCode = null; // Clear the instance
-                        qrReaderElement.innerHTML = ""; // Clear the video feed display
+                        html5QrCode = null; 
+                        qrReaderElement.innerHTML = ""; 
                     });
             }
             startButton.disabled = false;
@@ -295,12 +283,14 @@
 
         async function sendToSalesforce() {
             if (scannedUrls.length === 0) {
-                alert("No URLs to send.");
+                alert("No scanned text to send.");
                 return;
             }
 
             const payload = {
-                scannedUrls: scannedUrls
+                // Consider renaming 'scannedUrls' in the payload if it's not always URLs
+                // For example: scannedTexts: scannedUrls 
+                scannedItems: scannedUrls 
             };
             const jsonData = JSON.stringify(payload, null, 2);
 
@@ -308,80 +298,33 @@
             scanStatusElement.textContent = 'Preparing data for Salesforce...';
             scanStatusElement.className = 'status-info';
 
-            // --- !!! IMPORTANT: Salesforce Integration Point !!! ---
-            // This is where you'd make the actual API call to Salesforce.
-            // For now, we'll simulate it and show how to prepare.
-
-            // OPTION 1: Display JSON for manual copy-paste (simplest for demo)
-            // alert("Data to send to Salesforce (copy this):\n\n" + jsonData);
-            // scanStatusElement.textContent = 'Data ready. See alert or console.';
-            // scanStatusElement.className = 'status-success';
-
-            // OPTION 2: Use Fetch API to send to a backend/middleware or Salesforce directly (if configured)
-            // This requires a backend endpoint or a Salesforce REST API endpoint that can accept this data.
-            // And proper CORS configuration on the Salesforce side if calling directly.
-            try {
-                // Replace 'YOUR_SALESFORCE_ENDPOINT_OR_MIDDLEWARE_URL' with your actual endpoint
-                // const response = await fetch('YOUR_SALESFORCE_ENDPOINT_OR_MIDDLEWARE_URL', {
-                //     method: 'POST',
-                //     headers: {
-                //         'Content-Type': 'application/json',
-                //         // 'Authorization': 'Bearer YOUR_ACCESS_TOKEN' // If required
-                //     },
-                //     body: jsonData
-                // });
-
-                // if (!response.ok) {
-                //     const errorData = await response.text();
-                //     throw new Error(`Salesforce API Error: ${response.status} ${errorData}`);
-                // }
-                // const result = await response.json();
-                // console.log('Salesforce response:', result);
-                // scanStatusElement.textContent = 'Data successfully sent to Salesforce!';
-                // scanStatusElement.className = 'status-success';
-                // scannedUrls.length = 0; // Clear the list after successful send
-                // updateScannedList();
-
-
-                // --- SIMULATION for this example ---
-                scanStatusElement.textContent = 'Simulating send... Check console for JSON. (See code comments for actual integration)';
-                scanStatusElement.className = 'status-info';
-                setTimeout(() => {
-                     alert("Simulated Send Complete!\n\nPayload:\n" + jsonData + "\n\nCheck console for details. Implement actual Salesforce call in sendToSalesforce function.");
-                     scanStatusElement.textContent = 'Simulated send complete. Data logged to console.';
-                     scanStatusElement.className = 'status-success';
-                     // scannedUrls.length = 0; // Optionally clear list after simulated send
-                     // updateScannedList();
-                }, 1500);
-                // --- END SIMULATION ---
-
-            } catch (error) {
-                console.error('Error sending to Salesforce:', error);
-                scanStatusElement.textContent = `Error: ${error.message}`;
-                scanStatusElement.className = 'status-error';
-                alert(`Error sending data: ${error.message}`);
-            }
+            // --- SIMULATION for this example (actual Salesforce integration part remains the same) ---
+            scanStatusElement.textContent = 'Simulating send... Check console for JSON.';
+            scanStatusElement.className = 'status-info';
+            setTimeout(() => {
+                 alert("Simulated Send Complete!\n\nPayload:\n" + jsonData + "\n\nCheck console for details. Implement actual Salesforce call in sendToSalesforce function.");
+                 scanStatusElement.textContent = 'Simulated send complete. Data logged to console.';
+                 scanStatusElement.className = 'status-success';
+            }, 1500);
+            // --- END SIMULATION ---
         }
 
         startButton.addEventListener('click', startScanning);
         stopButton.addEventListener('click', stopScanning);
         sendButton.addEventListener('click', sendToSalesforce);
 
-        // Initial state
         scanStatusElement.textContent = 'Click "Start Scanning" to begin.';
         
-        // Check for camera permissions and availability early (optional good UX)
         Html5Qrcode.getCameras().then(devices => {
             if (devices && devices.length) {
-                // var cameraId = devices[0].id; // Use the first camera
                 console.log("Cameras available:", devices);
             } else {
-                scanStatusElement.textContent = 'No cameras found. Please ensure a camera is connected and permissions are granted.';
+                scanStatusElement.textContent = 'No cameras found. Ensure camera is connected and permissions granted.';
                 scanStatusElement.className = 'status-error';
                 startButton.disabled = true;
             }
         }).catch(err => {
-            scanStatusElement.textContent = 'Could not access cameras. Please check permissions.';
+            scanStatusElement.textContent = 'Could not access cameras. Check permissions.';
             scanStatusElement.className = 'status-error';
             startButton.disabled = true;
             console.error("Error getting cameras", err);
