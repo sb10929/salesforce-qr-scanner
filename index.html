@@ -199,30 +199,39 @@
             sendButton.disabled = scannedUrls.length === 0;
         }
 
-        function onScanSuccess(decodedText, decodedResult) {
-            // Basic URL validation (you might want a more robust regex)
-            if (decodedText.startsWith('http://') || decodedText.startsWith('https://')) {
-                if (!scannedUrls.includes(decodedText)) {
-                    scannedUrls.push(decodedText);
+                function onScanSuccess(decodedText, decodedResult) {
+            console.log("Raw decodedText from QR:", `"${decodedText}"`); // Log the raw text
+            console.log("Decoded result object:", decodedResult);
+
+            // Trim whitespace from the decoded text
+            const trimmedDecodedText = decodedText.trim();
+            console.log("Trimmed decodedText:", `"${trimmedDecodedText}"`);
+
+            // Basic URL validation (case-insensitive and handles common Salesforce URL patterns)
+            // Convert to lowercase for startsWith check to make it case-insensitive
+            const lowercasedText = trimmedDecodedText.toLowerCase();
+
+            if (lowercasedText.startsWith('http://') || lowercasedText.startsWith('https://')) {
+                // Check if it's already scanned using the trimmed version
+                if (!scannedUrls.includes(trimmedDecodedText)) {
+                    scannedUrls.push(trimmedDecodedText); // Store the trimmed version
                     updateScannedList();
-                    scanStatusElement.textContent = `Scanned: ${decodedText.substring(0, 30)}...`;
+                    scanStatusElement.textContent = `Scanned: ${trimmedDecodedText.substring(0, 30)}...`;
                     scanStatusElement.className = 'status-success';
-                    console.log(`Scan result: ${decodedText}`, decodedResult);
+                    console.log(`Scan result (added to list): ${trimmedDecodedText}`);
                     
-                    // Optional: Vibrate on success (mobile only)
                     if (navigator.vibrate) {
-                        navigator.vibrate(100); // Vibrate for 100ms
+                        navigator.vibrate(100);
                     }
                 } else {
                     scanStatusElement.textContent = 'URL already scanned.';
                     scanStatusElement.className = 'status-info';
                 }
             } else {
-                scanStatusElement.textContent = 'Scanned content is not a valid URL.';
+                scanStatusElement.textContent = `Invalid URL: "${trimmedDecodedText.substring(0,50)}..." Expected http:// or https://`;
                 scanStatusElement.className = 'status-error';
+                console.warn(`Invalid URL detected: Original='${decodedText}', Trimmed='${trimmedDecodedText}'`);
             }
-            // To continuously scan, don't stop the scanner here.
-            // html5QrCode.stop().then(ignore => {}).catch(err => console.error("Failed to stop scanner", err));
         }
 
         function onScanFailure(error) {
