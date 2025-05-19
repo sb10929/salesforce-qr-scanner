@@ -164,6 +164,49 @@
             cursor: not-allowed;
         }
 
+            .manual-entry-controls button { /* Style for the toggle button */
+        background-color: #17a2b8; /* Teal/Info color */
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1em;
+    }
+    .manual-entry-controls button:hover {
+        background-color: #138496;
+    }
+
+    #manualEntryFormContainer h3 {
+        margin-top: 0;
+        color: #333;
+    }
+
+    /* Re-using .controls button style for add/cancel, or define new ones */
+    #manualEntryFormContainer .controls-button {
+        /* If you used a class like .controls button for main controls */
+        /* you can add it to the manual entry buttons too */
+        /* Or define specific styles here: */
+        padding: 10px 15px;
+        font-size: 0.9em;
+        border-radius: 4px;
+        cursor: pointer;
+        border:none;
+        color: white;
+    }
+    #addManualEntryButton {
+        background-color: #0070d2; /* Salesforce Blue */
+    }
+    #addManualEntryButton:hover {
+        background-color: #005fb3;
+    }
+    #cancelManualEntryButton {
+        background-color: #6c757d; /* Grey */
+    }
+    #cancelManualEntryButton:hover {
+        background-color: #5a6268;
+    }
+
         #scan-status {
             margin-top: 15px;
             padding: 10px;
@@ -282,6 +325,26 @@
                 <input type="text" id="dateScanned" readonly>
             </div>
         </div>
+
+        <div class="manual-entry-controls" style="margin-bottom: 20px;">
+        <button id="toggleManualEntryButton">Manual Entry</button>
+    </div>
+
+    <div id="manualEntryFormContainer" style="display: none; background-color: #f0f8ff; padding: 15px; border-radius: 5px; margin-bottom: 20px; text-align: left;">
+        <h3>Manual Trailer Entry</h3>
+        <div class="form-group">
+            <label for="manualMake">Make:</label>
+            <input type="text" id="manualMake" placeholder="Enter trailer make">
+        </div>
+        <div class="form-group">
+            <label for="manualVin">VIN:</label>
+            <input type="text" id="manualVin" placeholder="Enter trailer VIN">
+        </div>
+        <!-- Optional: Add more fields if needed -->
+        <button id="addManualEntryButton" class="controls-button" style="margin-right: 10px;">Add to List</button>
+        <button id="cancelManualEntryButton" class="controls-button" style="background-color: #6c757d;">Cancel</button>
+        <div id="manualEntryStatus" style="margin-top: 10px; font-weight: bold;"></div>
+    </div>
 
         <div class="instructions">
             <p><strong>Instructions:</strong></p>
