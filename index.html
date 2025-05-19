@@ -499,12 +499,20 @@
                 scanStatusElement.textContent = 'Initializing scanner... Requesting camera...';
                 scanStatusElement.className = 'status-info';
                 const config = { fps: 10, qrbox: { width: 250, height: 250 }, facingMode: "environment" };
+                
                 try {
-                    html5QrCode = new Html5Qrcode("qr-reader"); // Use ID string
+                    html5QrCode = new Html5Qrcode("qr-reader");
                     html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
                         .then(() => {
                             scanStatusElement.textContent = 'Scanner started. Point camera at QR code.';
                             scanStatusElement.className = 'status-info';
+
+                            // --- ADD THIS LINE ---
+                            if (qrReaderElement) {
+                                qrReaderElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                            // --- END OF ADDITION ---
+
                         })
                         .catch(err => {
                             console.error("Failed to start scanner", err);
