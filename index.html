@@ -82,6 +82,8 @@
             border-radius: 8px;
             margin: 20px auto;
             overflow: hidden;
+            position: relative; /* Needed for absolute positioning of the overlay */
+            background-color: #333; /* Darker background for camera view */
         }
         
         #qr-reader__dashboard_section_csr span button {
@@ -91,6 +93,41 @@
             padding: 8px 15px !important;
             border-radius: 4px !important;
             cursor: pointer !important;
+        }
+
+        #scan-success-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(40, 167, 69, 0.85); /* Green, semi-transparent (Bootstrap's success green) */
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+            z-index: 10; /* Ensure it's above the video feed */
+            opacity: 0; /* Hidden by default */
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            pointer-events: none; /* So it doesn't interfere with scanner */
+            display: flex; /* For aligning icon and text */
+            align-items: center;
+        }
+
+        #scan-success-overlay.visible {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.05); /* Slight scale up effect */
+        }
+        
+        #scan-success-overlay svg {
+            width: 30px;
+            height: 30px;
+            margin-right: 10px;
+            stroke: white;
+            stroke-width: 5; /* SVG checkmark properties */
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
 
         #qr-reader__dashboard_section_csr span button:hover {
@@ -128,6 +165,7 @@
             align-items: center;
             justify-content: center;
             text-align: center; /* For multi-line messages */
+            
         }
 
         .status-success {
@@ -251,7 +289,15 @@
             </ol>
         </div>
 
-        <div id="qr-reader"></div>
+        <div id="qr-reader">
+            <!-- This is where the html5-qrcode library renders the video -->
+            <div id="scan-success-overlay">
+                <svg viewBox="0 0 50 50">
+                    <path fill="transparent" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                </svg>
+                <span>Scan Successful!</span>
+            </div>
+        </div>
         <div id="scan-status" class="status-info">Initializing...</div>
 
         <div class="controls">
