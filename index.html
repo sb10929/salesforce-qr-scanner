@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Salesforce QR Scanner</title>
     <style>
+        /* ... (Keep existing styles) ... */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
@@ -33,13 +34,54 @@
             margin-bottom: 20px;
         }
 
+        .session-inputs {
+            background-color: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .session-inputs h2 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .form-group input[type="text"],
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 0.9em;
+        }
+        .form-group input[readonly] {
+            background-color: #e9ecef;
+        }
+
+
         #qr-reader {
             width: 100%;
-            max-width: 400px; /* Or adjust as needed */
+            max-width: 400px;
             border: 1px solid #ddd;
             border-radius: 8px;
             margin: 20px auto;
-            overflow: hidden; /* Important for camera view */
+            overflow: hidden;
         }
         
         #qr-reader__dashboard_section_csr span button {
@@ -54,7 +96,6 @@
         #qr-reader__dashboard_section_csr span button:hover {
             background-color: #005fb3 !important;
         }
-
 
         .controls button {
             background-color: #0070d2;
@@ -82,6 +123,10 @@
             padding: 10px;
             border-radius: 5px;
             font-weight: bold;
+            min-height: 40px; /* Ensure space for messages */
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .status-success {
@@ -102,18 +147,18 @@
             border: 1px solid #b8daff;
         }
 
-        #scanned-urls-container { /* Keeping name generic, but it now stores any text */
+        #scanned-items-container { /* Renamed from scanned-urls-container */
             margin-top: 20px;
             text-align: left;
         }
 
-        #scanned-urls-container h2 {
+        #scanned-items-container h2 {
             font-size: 18px;
             color: #555;
             margin-bottom: 10px;
         }
 
-        #scanned-urls-list {
+        #scanned-items-list { /* Renamed from scanned-urls-list */
             list-style-type: none;
             padding: 0;
             max-height: 200px;
@@ -123,14 +168,19 @@
             padding: 10px;
         }
 
-        #scanned-urls-list li {
+        #scanned-items-list li {
             padding: 8px 0;
             border-bottom: 1px solid #f0f0f0;
             word-break: break-all;
             font-size: 14px;
         }
-        #scanned-urls-list li:last-child {
+        #scanned-items-list li:last-child {
             border-bottom: none;
+        }
+        .item-geo {
+            font-size: 0.8em;
+            color: #777;
+            margin-left: 10px;
         }
         .instructions {
             font-size: 0.9em;
@@ -142,20 +192,41 @@
             border-left: 4px solid #0070d2;
         }
     </style>
-    <!-- Include the html5-qrcode library -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
     <div class="container">
         <h1>Salesforce QR Scanner</h1>
 
+        <div class="session-inputs">
+            <h2>Session Information</h2>
+            <div class="form-group">
+                <label for="location">Location:</label>
+                <select id="location">
+                    <option value="Hideaway Bay">Hideaway Bay</option>
+                    <option value="PreOwned Center">PreOwned Center</option>
+                    <option value="Surf HQ">Surf HQ</option>
+                    <option value="Bennington">Bennington</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="scannedBy">Scanned By:</label>
+                <input type="text" id="scannedBy" placeholder="Enter your name">
+            </div>
+            <div class="form-group">
+                <label for="dateScanned">Date Scanned:</label>
+                <input type="text" id="dateScanned" readonly>
+            </div>
+        </div>
+
         <div class="instructions">
             <p><strong>Instructions:</strong></p>
             <ol>
+                <li>Fill in Session Information above.</li>
                 <li>Click "Start Scanning" to activate the camera.</li>
-                <li>Allow camera permissions if prompted.</li>
-                <li>Point your camera at a QR code.</li>
-                <li>Scanned text will appear in the list below.</li>
+                <li>Allow camera and location permissions if prompted.</li>
+                <li>Point your camera at a QR code. Geolocation will be captured.</li>
+                <li>Scanned items will appear in the list below.</li>
                 <li>Click "Stop Scanning" to pause.</li>
                 <li>Click "Send to Salesforce" when done.</li>
             </ol>
@@ -170,73 +241,153 @@
             <button id="sendButton" disabled>Send to Salesforce</button>
         </div>
 
-        <div id="scanned-urls-container">
-            <h2>Scanned Text:</h2> <!-- Changed H2 slightly for clarity -->
-            <ul id="scanned-urls-list">
-                <!-- Scanned text will be appended here -->
+        <div id="scanned-items-container">
+            <h2>Scanned Items:</h2>
+            <ul id="scanned-items-list">
+                <!-- Scanned items will be appended here -->
             </ul>
         </div>
     </div>
 
     <script>
-        const scannedUrls = []; // Renaming this variable might be good, e.g., scannedTexts, but for now keeping it for minimal changes
+        // --- Global Variables & DOM Elements ---
+        const scannedItems = []; // Stores objects: {text, latitude, longitude, accuracy, geoError, timestamp}
         let html5QrCode = null;
+
+        const locationSelect = document.getElementById('location');
+        const scannedByInput = document.getElementById('scannedBy');
+        const dateScannedInput = document.getElementById('dateScanned');
 
         const qrReaderElement = document.getElementById('qr-reader');
         const scanStatusElement = document.getElementById('scan-status');
-        const scannedUrlsListElement = document.getElementById('scanned-urls-list');
+        const scannedItemsListElement = document.getElementById('scanned-items-list');
         const startButton = document.getElementById('startButton');
         const stopButton = document.getElementById('stopButton');
         const sendButton = document.getElementById('sendButton');
 
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+            const dd = String(today.getDate()).padStart(2, '0');
+            dateScannedInput.value = `${yyyy}-${mm}-${dd}`;
+        });
+
+        // --- Helper Functions ---
         function updateScannedList() {
-            scannedUrlsListElement.innerHTML = ''; // Clear existing list
-            scannedUrls.forEach(text => { // Changed 'url' to 'text' for clarity in this scope
+            scannedItemsListElement.innerHTML = '';
+            scannedItems.forEach(item => {
                 const listItem = document.createElement('li');
-                listItem.textContent = text;
-                scannedUrlsListElement.appendChild(listItem);
+                let geoInfo = '';
+                if (item.geoError) {
+                    geoInfo = `<span class="item-geo">(Geo: ${item.geoError})</span>`;
+                } else if (item.latitude !== null && item.longitude !== null) {
+                    geoInfo = `<span class="item-geo">(Lat: ${item.latitude.toFixed(5)}, Lon: ${item.longitude.toFixed(5)}, Acc: ${item.accuracy}m)</span>`;
+                } else {
+                    geoInfo = `<span class="item-geo">(Geo: Pending...)</span>`; // Should not stay long
+                }
+                listItem.innerHTML = `${item.text} ${geoInfo}`;
+                scannedItemsListElement.appendChild(listItem);
             });
-            sendButton.disabled = scannedUrls.length === 0;
+            sendButton.disabled = scannedItems.length === 0;
         }
 
-        // --- MODIFIED onScanSuccess ---
-        function onScanSuccess(decodedText, decodedResult) {
-            console.log("Raw decodedText from QR:", `"${decodedText}"`); // Log the raw text
-            console.log("Decoded result object:", decodedResult);
-
-            // Trim whitespace from the decoded text for consistency
-            const trimmedDecodedText = decodedText.trim();
-            console.log("Trimmed decodedText (to be added):", `"${trimmedDecodedText}"`);
-
-            // Check if this text has already been scanned
-            if (!scannedUrls.includes(trimmedDecodedText)) {
-                scannedUrls.push(trimmedDecodedText); // Add the trimmed text to the list
-                updateScannedList();
-                scanStatusElement.textContent = `Scanned: ${trimmedDecodedText.substring(0, 40)}...`; // Show a preview
-                scanStatusElement.className = 'status-success';
-                console.log(`Scan result added to list: "${trimmedDecodedText}"`);
-                
-                // Optional: Vibrate on success (mobile only)
-                if (navigator.vibrate) {
-                    navigator.vibrate(100); // Vibrate for 100ms
+        function getCurrentLocation() {
+            return new Promise((resolve, reject) => {
+                if (!navigator.geolocation) {
+                    reject(new Error('Geolocation is not supported by your browser.'));
+                    return;
                 }
-            } else {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        resolve({
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                            accuracy: position.coords.accuracy,
+                            timestamp: new Date(position.timestamp).toISOString()
+                        });
+                    },
+                    (error) => {
+                        let errorMessage = 'Unknown geo error';
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMessage = "User denied Geolocation.";
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMessage = "Location information unavailable.";
+                                break;
+                            case error.TIMEOUT:
+                                errorMessage = "Geolocation request timed out.";
+                                break;
+                        }
+                        reject(new Error(errorMessage));
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } // Options
+                );
+            });
+        }
+
+        // --- Scan Logic ---
+        async function onScanSuccess(decodedText, decodedResult) {
+            console.log("Raw decodedText from QR:", `"${decodedText}"`);
+            const trimmedDecodedText = decodedText.trim();
+
+            // Check for duplicates based on text only
+            if (scannedItems.some(item => item.text === trimmedDecodedText)) {
                 scanStatusElement.textContent = 'Text already scanned.';
                 scanStatusElement.className = 'status-info';
                 console.log(`Duplicate scan ignored: "${trimmedDecodedText}"`);
+                return;
+            }
+
+            scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Getting location...`;
+            scanStatusElement.className = 'status-info';
+
+            let geoData = { latitude: null, longitude: null, accuracy: null, geoError: null, timestamp: new Date().toISOString() };
+
+            try {
+                const location = await getCurrentLocation();
+                geoData.latitude = location.latitude;
+                geoData.longitude = location.longitude;
+                geoData.accuracy = location.accuracy;
+                geoData.timestamp = location.timestamp; // Use timestamp from geolocation
+                scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Location captured!`;
+                scanStatusElement.className = 'status-success';
+            } catch (error) {
+                geoData.geoError = error.message;
+                scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Geo Error: ${error.message}`;
+                scanStatusElement.className = 'status-error'; // Show error but still add item
+                console.warn(`Geolocation error for "${trimmedDecodedText}": ${error.message}`);
+            }
+
+            scannedItems.push({
+                text: trimmedDecodedText,
+                ...geoData
+            });
+            updateScannedList();
+            
+            if (navigator.vibrate) {
+                navigator.vibrate(100);
             }
         }
-        // --- END MODIFIED onScanSuccess ---
-
 
         function onScanFailure(error) {
-            // Handle scan failure, usually means no QR code detected in the frame.
-            // console.warn(`QR error = ${error}`);
+            // console.warn(`QR error = ${error}`); // Can be noisy
         }
 
         function startScanning() {
+            if (!scannedByInput.value.trim()) {
+                alert("Please enter your name in 'Scanned By' field.");
+                scannedByInput.focus();
+                return;
+            }
+
             startButton.disabled = true;
             stopButton.disabled = false;
+            locationSelect.disabled = true; // Disable session inputs during scan
+            scannedByInput.disabled = true;
+
             scanStatusElement.textContent = 'Initializing scanner... Requesting camera...';
             scanStatusElement.className = 'status-info';
 
@@ -253,9 +404,9 @@
                  scanStatusElement.className = 'status-info';
             }).catch(err => {
                 console.error("Failed to start scanner", err);
-                scanStatusElement.textContent = `Error starting scanner: ${err.message}. Ensure camera access is allowed.`;
+                scanStatusElement.textContent = `Error starting scanner: ${err.message}.`;
                 scanStatusElement.className = 'status-error';
-                stopScanning(); 
+                stopScanning(); // Reset UI
             });
         }
 
@@ -265,7 +416,6 @@
                     .then(ignore => {
                         scanStatusElement.textContent = 'Scanner stopped.';
                         scanStatusElement.className = 'status-info';
-                        console.log("QR Code scanning stopped.");
                     })
                     .catch(err => {
                         console.error("Failed to stop scanner", err);
@@ -279,18 +429,28 @@
             }
             startButton.disabled = false;
             stopButton.disabled = true;
+            locationSelect.disabled = false;
+            scannedByInput.disabled = false;
         }
 
         async function sendToSalesforce() {
-            if (scannedUrls.length === 0) {
-                alert("No scanned text to send.");
+            if (scannedItems.length === 0) {
+                alert("No items to send.");
+                return;
+            }
+            if (!scannedByInput.value.trim()) {
+                alert("Please ensure 'Scanned By' field is filled.");
+                scannedByInput.focus();
                 return;
             }
 
             const payload = {
-                // Consider renaming 'scannedUrls' in the payload if it's not always URLs
-                // For example: scannedTexts: scannedUrls 
-                scannedItems: scannedUrls 
+                sessionInfo: {
+                    location: locationSelect.value,
+                    scannedBy: scannedByInput.value.trim(),
+                    dateScanned: dateScannedInput.value
+                },
+                scannedItems: scannedItems
             };
             const jsonData = JSON.stringify(payload, null, 2);
 
@@ -302,24 +462,27 @@
             scanStatusElement.textContent = 'Simulating send... Check console for JSON.';
             scanStatusElement.className = 'status-info';
             setTimeout(() => {
-                 alert("Simulated Send Complete!\n\nPayload:\n" + jsonData + "\n\nCheck console for details. Implement actual Salesforce call in sendToSalesforce function.");
+                 alert("Simulated Send Complete!\n\nPayload:\n" + jsonData + "\n\nCheck console. Implement actual Salesforce call.");
                  scanStatusElement.textContent = 'Simulated send complete. Data logged to console.';
                  scanStatusElement.className = 'status-success';
+                 // Optionally clear items after send:
+                 // scannedItems.length = 0;
+                 // updateScannedList();
+                 // stopScanning(); // Reset UI
             }, 1500);
             // --- END SIMULATION ---
         }
 
+        // --- Event Listeners ---
         startButton.addEventListener('click', startScanning);
         stopButton.addEventListener('click', stopScanning);
         sendButton.addEventListener('click', sendToSalesforce);
 
-        scanStatusElement.textContent = 'Click "Start Scanning" to begin.';
-        
+        // --- Initial Page Load State ---
+        scanStatusElement.textContent = 'Fill session info & click "Start Scanning".';
         Html5Qrcode.getCameras().then(devices => {
-            if (devices && devices.length) {
-                console.log("Cameras available:", devices);
-            } else {
-                scanStatusElement.textContent = 'No cameras found. Ensure camera is connected and permissions granted.';
+            if (!devices || !devices.length) {
+                scanStatusElement.textContent = 'No cameras found. Ensure camera and permissions.';
                 scanStatusElement.className = 'status-error';
                 startButton.disabled = true;
             }
@@ -327,7 +490,6 @@
             scanStatusElement.textContent = 'Could not access cameras. Check permissions.';
             scanStatusElement.className = 'status-error';
             startButton.disabled = true;
-            console.error("Error getting cameras", err);
         });
 
     </script>
