@@ -407,6 +407,13 @@
             const sendButton = document.getElementById('sendButton');
             const checkLocationButton = document.getElementById('checkLocationButton');
             const scanSuccessOverlay = document.getElementById('scan-success-overlay'); // This will still be found
+            const toggleManualEntryButton = document.getElementById('toggleManualEntryButton');
+            const manualEntryFormContainer = document.getElementById('manualEntryFormContainer');
+            const manualMakeInput = document.getElementById('manualMake');
+            const manualVinInput = document.getElementById('manualVin');
+            const addManualEntryButton = document.getElementById('addManualEntryButton');
+            const cancelManualEntryButton = document.getElementById('cancelManualEntryButton');
+            const manualEntryStatus = document.getElementById('manualEntryStatus');
 
             // --- Global State ---
             const scannedItems = [];
@@ -618,6 +625,120 @@
             }
 
             function onScanFailure(error) { /* console.warn(`QR error = ${error}`); */ }
+
+                    // --- NEW: Manual Entry Logic ---
+        function toggleManualEntryForm(show) {
+            if (manualEntryFormContainer) {
+                manualEntryFormContainer.style.display = show ? 'block' : 'none';
+                if (show) {
+                    // Optionally clear fields when showing
+                    if(manualMakeInput) manualMakeInput.value = '';
+                    if(manualVinInput) manualVinInput.value = '';
+                    if(manualEntryStatus) manualEntryStatus.textContent = '';
+                    if(manualMakeInput) manualMakeInput.focus();
+                    // If scanner is active, maybe stop it? Or disable manual entry button while scanning.
+                    if (html5QrCode && html5QrCode.isScanning) {
+                        // alert("Please stop the QR scanner before manual entry.");
+                        // return false; // Prevent form from showing if scanner is active
+                        // Or, more gracefully:
+                        stopScanning(); // Stop the scanner if it's active
+                        scanStatusElement.textContent = "Scanner stopped for manual entry.";
+                    }
+                }
+            }
+            return true; // Indicate success/failure if needed later
+        }
+
+        async function handleAddManualEntry() {
+            if (!manualMakeInput || !manualVinInput || !manualEntryStatus) return;
+
+            const make = manualMakeInput.value.trim();
+            const vin = manualVinInput.value.trim();
+
+            if (!make || !vin) {
+                manualEntryStatus.textContent = "Make and VIN are required.";
+                manualEntryStatus.style.color = 'red';
+                return;
+            }
+
+            // Construct the text for the list. You can format this as needed.
+            // Prepending "MANUAL:" to distinguish from QR scans.
+            const manualEntryText = `MANUAL: ${make} - VIN: ${vin}`;
+
+            // Check for duplicates (optional, but good idea)
+            if (scannedItems.some(item => item.text.toUpperCase() === manualEntryText.toUpperCase())) {
+                manualEntryStatus.textContent = "This entry already exists in the list.";
+                manualEntryStatus.style.color = 'orange';
+                return;
+            }
+            
+            manualEntryStatus.textContent = "Getting location for manual entry...";
+            manualEntryStatus.style.color = 'blue';
+
+
+            let geoData = { latitude: null, longitude: null, accuracy: null, geoError: null, timestamp: new Date().toISOString() };
+
+            try {
+                // Reuse geolocation fetching logic
+                const location = await fetchCurrentLocation(); // Assumes fetchCurrentLocation is defined
+                geoData.latitude = location.latitude;
+                geoData.longitude = location.longitude;
+                geoData.accuracy = location.accuracy;
+                geoData.timestamp = location.timestamp; // Use timestamp from geolocation
+                manualEntryStatus.textContent = "Manual entry added with location!";
+                manualEntryStatus.style.color = 'green';
+
+            } catch (error) {
+                geoData.geoError = error.message;
+                manualEntryStatus.textContent = `Manual entry added. Geo Error: ${error.message}`;
+                manualEntryStatus.style.color = 'darkorange'; // Entry added, but geo failed
+                console.warn(`Geolocation error for manual entry "${manualEntryText}": ${error.message}`);
+            }
+
+
+            scannedItems.push({
+                text: manualEntryText,
+                ...geoData
+                // You could add more specific fields here if your Salesforce payload needs them structured
+                // e.g., type: 'manual', make: make, vin: vin, 
+            });
+
+            updateScannedList();
+            if (navigator.vibrate) navigator.vibrate(50); // Shorter vibration for manual
+
+            // Clear fields and hide form after a short delay to show success message
+            setTimeout(() => {
+                toggleManualEntryForm(false);
+            }, 1500);
+        }
+
+
+        // --- Attach Event Listeners & Initial Calls ---
+        // ... (existing event listeners: startButton, stopButton, etc.) ...
+
+        if (toggleManualEntryButton) {
+            toggleManualEntryButton.addEventListener('click', () => {
+                // Toggle visibility: if it's 'none' or empty, show it, otherwise hide it.
+                const currentlyVisible = manualEntryFormContainer.style.display === 'block';
+                toggleManualEntryForm(!currentlyVisible);
+            });
+        } else {
+            console.error("toggleManualEntryButton not found!");
+        }
+
+        if (addManualEntryButton) {
+            addManualEntryButton.addEventListener('click', handleAddManualEntry);
+        } else {
+            console.error("addManualEntryButton not found!");
+        }
+
+        if (cancelManualEntryButton) {
+            cancelManualEntryButton.addEventListener('click', () => {
+                toggleManualEntryForm(false);
+            });
+        } else {
+            console.error("cancelManualEntryButton not found!");
+        }
 
             function startScanning() {
                 if (!scannedByInput || !startButton || !stopButton || !locationSelect || !scanStatusElement || !qrReaderDivForLibrary || !scannerViewportContainer ) {
