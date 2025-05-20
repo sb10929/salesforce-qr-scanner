@@ -534,131 +534,116 @@
                 salesforceLoginButton.textContent = 'Logout from Salesforce';
                 salesforceLoginButton.onclick = salesforceLogout;
 
-                let userDisplayName = `User ID: ${sfConnection.userInfo.id}`; // Fallback
-                
-            if (sfConnection && sfConnection.userInfo) {
-                if (sfConnection.userInfo.display_name) {
-                    userDisplayName = sfConnection.userInfo.display_name;
-                } else if (sfConnection.userInfo.first_name && sfConnection.userInfo.last_name) {
-                    userDisplayName = `${sfConnection.userInfo.first_name} ${sfConnection.userInfo.last_name}`;
-                } else if (sfConnection.userInfo.username) {
-                    userDisplayName = sfConnection.userInfo.username;
-                } else if (sfConnection.userInfo.preferred_username) { // Sometimes this is more user-friendly
-                    userDisplayName = sfConnection.userInfo.preferred_username;
+                // --- MODIFIED: Generic login success message ---
+                if (sfConnection && sfConnection.userInfo && sfConnection.userInfo.id) {
+                    // We confirm we have a connection and user ID, but display a generic message
+                    salesforceStatusElement.textContent = 'Logged in Successfully.'; 
+                    console.log("User logged in. ID:", sfConnection.userInfo.id); // Keep logging ID for debug if needed
+                } else {
+                    // This case implies isLoggedIn is true, but sfConnection or userInfo is faulty
+                    salesforceStatusElement.textContent = 'Logged in (Connection issue).';
+                    console.warn("updateSalesforceLoginStatus: isLoggedIn is true, but sfConnection or userInfo is problematic.", 
+                                 sfConnection ? sfConnection.userInfo : "sfConnection is null");
                 }
-                // If after all checks, it's still just the ID, the fallback above will be used.
-            }
-            
-            if (sfConnection && sfConnection.userInfo && sfConnection.userInfo.id) {
-                 salesforceStatusElement.textContent = `Logged in as ${userDisplayName}.`;
-            } else {
-                // This case should ideally not be hit if isLoggedIn is true and sfConnection is set
-                salesforceStatusElement.textContent = 'Logged in (User details partially available).';
-                console.warn("sfConnection.userInfo might be incomplete:", sfConnection ? sfConnection.userInfo : "sfConnection is null");
-            }
+                // --- END MODIFICATION ---
 
-            salesforceStatusElement.className = 'sf-status-message status-success';
-            if (sendButton) sendButton.disabled = scannedItems.length === 0;
+                salesforceStatusElement.className = 'sf-status-message status-success';
+                if (sendButton) sendButton.disabled = scannedItems.length === 0;
 
-        } else { // Not logged in
-            salesforceLoginButton.textContent = 'Login to Salesforce';
-            salesforceLoginButton.onclick = salesforceLogin;
-            salesforceStatusElement.textContent = message || 'Not logged into Salesforce. Please login to send data.';
-            if (message && (message.toLowerCase().includes('fail') || message.toLowerCase().includes('error'))) {
-                 salesforceStatusElement.className = 'sf-status-message status-error';
-            } else {
-                 salesforceStatusElement.className = 'sf-status-message status-info';
+            } else { // Not logged in
+                salesforceLoginButton.textContent = 'Login to Salesforce';
+                salesforceLoginButton.onclick = salesforceLogin;
+                salesforceStatusElement.textContent = message || 'Not logged into Salesforce. Please login to send data.';
+                if (message && (message.toLowerCase().includes('fail') || message.toLowerCase().includes('error'))) {
+                    salesforceStatusElement.className = 'sf-status-message status-error';
+                } else {
+                    salesforceStatusElement.className = 'sf-status-message status-info';
+                }
+                if (sendButton) sendButton.disabled = true;
             }
-            if (sendButton) sendButton.disabled = true;
         }
-    }
 
-    function salesforceLogin() {
-        console.log("Attempting Salesforce login...");
-        if (sfConnection && sfConnection.accessToken) {
-            console.log("Already logged in.");
-            // sfConnection.userInfo should already be populated from a previous login or session check
-            updateSalesforceLoginStatus(true);
-            return;
-        }
-        if (typeof jsforce === 'undefined') {
-            console.error("jsforce library is not loaded!");
-            if(salesforceStatusElement) salesforceStatusElement.textContent = "Error: jsforce library not found.";
-            return;
-        }
-        jsforce.browser.init({
-            clientId: SF_CLIENT_ID,
-            redirectUri: SF_REDIRECT_URI,
-            loginUrl: SF_LOGIN_URL,
-            version: '58.0'
-        });
-        // The login function itself should return the userInfo object
-        // which jsforce.browser will store in its connection object.
-        jsforce.browser.login({}, function(err, userInfo) { // userInfo here is directly from the login auth callback
-            if (err) {
-                console.error("Salesforce login error:", err);
-                updateSalesforceLoginStatus(false, `Login failed: ${err.message || 'Unknown error'}`);
+        function salesforceLogin() {
+            console.log("Attempting Salesforce login...");
+            if (sfConnection && sfConnection.accessToken) {
+                console.log("Already logged in. Current userInfo:", JSON.stringify(sfConnection.userInfo, null, 2));
+                updateSalesforceLoginStatus(true);
                 return;
             }
-            // userInfo from login callback might not be the same object instance as sfConnection.userInfo later,
-            // but jsforce.browser.connection.userInfo should be populated by jsforce.
-            console.log("Salesforce login successful. User Info from login callback:", userInfo);
-            sfConnection = jsforce.browser.connection; 
-            // At this point, sfConnection.userInfo should be populated by jsforce based on the auth response.
-            // If not, we might need to explicitly assign it or use sfConnection.identity()
-            if (!sfConnection.userInfo || !sfConnection.userInfo.id) {
-                 console.warn("sfConnection.userInfo not fully populated immediately after login by jsforce.browser.connection. Using callback's userInfo.");
-                 sfConnection.userInfo = userInfo; // Ensure it's set
+            if (typeof jsforce === 'undefined') {
+                console.error("jsforce library is not loaded!");
+                if(salesforceStatusElement) salesforceStatusElement.textContent = "Error: jsforce library not found.";
+                return;
             }
-            updateSalesforceLoginStatus(true);
-        });
-    }
-
-    function checkSalesforceSession() {
-        console.log("Checking Salesforce session (v4 - User Name)...");
-        if (typeof jsforce === 'undefined') {
-            console.error("jsforce library is not loaded for session check!");
-            updateSalesforceLoginStatus(false, "JSforce library error.");
-            return;
-        }
-
-        jsforce.browser.init({
-            clientId: SF_CLIENT_ID,
-            redirectUri: SF_REDIRECT_URI,
-            loginUrl: SF_LOGIN_URL,
-            version: '58.0'
-        });
-
-        if (jsforce.browser.connection && jsforce.browser.connection.accessToken) {
-            sfConnection = jsforce.browser.connection;
-            // jsforce.browser.init usually populates sfConnection.userInfo if a session is restored.
-            // If not, or if it's incomplete, we explicitly call identity().
-            if (!sfConnection.userInfo || !sfConnection.userInfo.id || !sfConnection.userInfo.display_name) { // Check for display_name too
-                console.log("Session restored, but userInfo might be incomplete. Attempting to fetch identity...");
-                sfConnection.identity((err, res) => { // 'res' is the identity info
-                    if (err) {
-                        console.error("Error fetching identity during session check:", err);
-                        // Still logged in, but can't get full user details
-                        updateSalesforceLoginStatus(true, "Logged in, but user details fetch failed.");
-                        return;
-                    }
-                    sfConnection.userInfo = res; // Store the fetched identity info
-                    // jsforce's identity response uses user_id, ensure .id is present for consistency
-                    if(sfConnection.userInfo && sfConnection.userInfo.user_id && !sfConnection.userInfo.id) {
+            jsforce.browser.init({
+                clientId: SF_CLIENT_ID,
+                redirectUri: SF_REDIRECT_URI,
+                loginUrl: SF_LOGIN_URL,
+                version: '58.0'
+            });
+            jsforce.browser.login({}, function(err, userInfo) { 
+                if (err) {
+                    console.error("Salesforce login error:", err);
+                    updateSalesforceLoginStatus(false, `Login failed: ${err.message || 'Unknown error'}`);
+                    return;
+                }
+                console.log("Salesforce login successful. UserInfo from login() callback:", JSON.stringify(userInfo, null, 2));
+                sfConnection = jsforce.browser.connection; 
+                
+                if (userInfo && (!sfConnection.userInfo || !sfConnection.userInfo.id)) { 
+                     console.log("Assigning userInfo from login callback to sfConnection.userInfo as it seems more complete or sfConnection.userInfo is missing ID.");
+                     sfConnection.userInfo = userInfo; 
+                     if(sfConnection.userInfo && sfConnection.userInfo.user_id && !sfConnection.userInfo.id) {
                         sfConnection.userInfo.id = sfConnection.userInfo.user_id;
-                    }
-                    console.log("Salesforce identity/userInfo fetched during session check. User Info:", sfConnection.userInfo);
-                    updateSalesforceLoginStatus(true);
-                });
-            } else {
-                console.log("Salesforce session restored with complete userInfo. User Info:", sfConnection.userInfo);
+                     }
+                }
+                console.log("sfConnection.userInfo after login and potential assignment:", JSON.stringify(sfConnection.userInfo, null, 2));
                 updateSalesforceLoginStatus(true);
-            }
-        } else {
-            console.log("No active Salesforce session found by jsforce.browser.connection.");
-            updateSalesforceLoginStatus(false);
+            });
         }
-    }
+
+        function checkSalesforceSession() {
+            console.log("Checking Salesforce session (v5 - Generic Login Msg)...");
+            if (typeof jsforce === 'undefined') {
+                console.error("jsforce library is not loaded for session check!");
+                updateSalesforceLoginStatus(false, "JSforce library error.");
+                return;
+            }
+            jsforce.browser.init({
+                clientId: SF_CLIENT_ID,
+                redirectUri: SF_REDIRECT_URI,
+                loginUrl: SF_LOGIN_URL,
+                version: '58.0'
+            });
+
+            if (jsforce.browser.connection && jsforce.browser.connection.accessToken) {
+                sfConnection = jsforce.browser.connection;
+                console.log("Session restored by jsforce.browser.connection. Initial sfConnection.userInfo:", JSON.stringify(sfConnection.userInfo, null, 2));
+                
+                if (!sfConnection.userInfo || !sfConnection.userInfo.id ) { 
+                    console.log("Session restored, but sfConnection.userInfo.id is missing. Attempting to fetch full identity via sfConnection.identity()...");
+                    sfConnection.identity((err, res) => { 
+                        if (err) {
+                            console.error("Error fetching identity during session check:", err);
+                            updateSalesforceLoginStatus(true, "Logged in (Connection issue)."); 
+                            return;
+                        }
+                        console.log("Identity call successful. Full identity response (res):", JSON.stringify(res, null, 2));
+                        sfConnection.userInfo = res; 
+                        if(sfConnection.userInfo && sfConnection.userInfo.user_id && !sfConnection.userInfo.id) {
+                            sfConnection.userInfo.id = sfConnection.userInfo.user_id;
+                        }
+                        updateSalesforceLoginStatus(true); 
+                    });
+                } else {
+                    console.log("Salesforce session restored with existing userInfo containing an ID.");
+                    updateSalesforceLoginStatus(true); 
+                }
+            } else {
+                console.log("No active Salesforce session found by jsforce.browser.connection.");
+                updateSalesforceLoginStatus(false);
+            }
+        }
 
         function salesforceLogout() {
             console.log("Attempting Salesforce logout...");
@@ -686,7 +671,7 @@
                 salesforceLogin(); 
                 return;
             }
-            if (!sfConnection.userInfo || !sfConnection.userInfo.id) { // Check added as per previous discussion if Scanned_By_User__c is lookup
+            if (!sfConnection.userInfo || !sfConnection.userInfo.id) { 
                 alert("Salesforce user information is not available. Please try logging out and back in.");
                 console.error("Salesforce userInfo or userInfo.id is missing for Scanned_By_User__c mapping:", sfConnection.userInfo);
                 updateSalesforceLoginStatus(true, "User info missing. Re-login needed."); 
@@ -710,7 +695,6 @@
             const sessionInfoData = {
                 location: locationSelect.value,
                 scannedByText: scannedByInput.value.trim(), 
-                // salesforceUserId: sfConnection.userInfo.id, // Use this if Scanned_By_User__c is a Lookup(User)
                 dateScanned: dateScannedInput.value
             };
 
@@ -728,8 +712,7 @@
 
                 const eventPayload = {
                     Location__c: sessionInfoData.location,
-                    // Scanned_By_User__c: sessionInfoData.salesforceUserId, // If this is a Lookup(User)
-                    Scanned_By_User__c: sessionInfoData.scannedByText, // As per your request, not changing this. Ensure it's a Text field in SF.
+                    Scanned_By_User__c: sessionInfoData.scannedByText, 
                     Date_Scanned__c: new Date(sessionInfoData.dateScanned).toISOString(),
                     QR_Code_Text__c: item.text, 
                     Latitude__c: item.latitude,
@@ -739,8 +722,6 @@
                     Scan_Type__c: scanType,
                     Manual_Make__c: manualMake, 
                     Manual_VIN__c: manualVin,
-                    // ---- CORRECTED: Send Salesforce ID as a TEXT field ----
-                    // Replace 'Linked_Trailer_ID__c' with your actual TEXT field API name on the Platform Event
                     Linked_Trailer_ID__c: item.salesforceId || null 
                 };
                 
