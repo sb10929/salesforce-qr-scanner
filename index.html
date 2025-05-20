@@ -538,7 +538,7 @@
 
                 // IMPORTANT: Ensure these field API names EXACTLY match your Platform Event fields
                 const eventPayload = {
-                    Session_Location__c: sessionInfoData.location,       // Example: Location__c might be your field for location
+                    Location__c: sessionInfoData.location,       // Example: Location__c might be your field for location
                     Scanned_By_User__c: sessionInfoData.scannedBy,
                     Date_Scanned__c: new Date(sessionInfoData.dateScanned).toISOString(),
                     QR_Code_Text__c: item.text,
