@@ -511,7 +511,7 @@
         const scannedItems = [];
         let html5QrCode = null;
         let vinSearchDebounceTimer = null; 
-        let selectedSalesforceTrailerId = null; // <-- ADDED: To store ID from VIN search
+        let selectedSalesforceTrailerId = null; 
 
         // --- DOM Element Variables (will be assigned in DOMContentLoaded) ---
         let locationSelect, scannedByInput, dateScannedInput, scannerViewportContainer,
@@ -533,7 +533,6 @@
             if (isLoggedIn) {
                 salesforceLoginButton.textContent = 'Logout from Salesforce';
                 salesforceLoginButton.onclick = salesforceLogout;
-                // Ensure sfConnection and userInfo are valid before accessing properties
                 if (sfConnection && sfConnection.userInfo && sfConnection.userInfo.id) {
                     const displayName = sfConnection.userInfo.preferred_username || sfConnection.userInfo.display_name || sfConnection.userInfo.username || `User ID: ${sfConnection.userInfo.id}`;
                     salesforceStatusElement.textContent = `Logged in as ${displayName}.`;
@@ -582,8 +581,6 @@
                 }
                 console.log("Salesforce login successful. User ID: " + userInfo.id + ", Org ID: " + userInfo.organizationId);
                 sfConnection = jsforce.browser.connection;
-                // jsforce.browser.login should populate sfConnection.userInfo
-                // If not, an explicit identity call might be needed here, but usually it's handled.
                 updateSalesforceLoginStatus(true);
             });
         }
@@ -605,7 +602,6 @@
 
             if (jsforce.browser.connection && jsforce.browser.connection.accessToken) {
                 sfConnection = jsforce.browser.connection;
-                // If userInfo is missing after init, try to fetch it.
                 if (!sfConnection.userInfo || !sfConnection.userInfo.id) {
                     console.log("Session restored, but userInfo missing. Attempting to fetch identity...");
                     sfConnection.identity((err, res) => {
@@ -614,8 +610,7 @@
                             updateSalesforceLoginStatus(true, "Logged in, but user details fetch failed.");
                             return;
                         }
-                        sfConnection.userInfo = res; // Store the fetched identity info
-                        // Ensure .id is available as jsforce.browser.login usually sets it
+                        sfConnection.userInfo = res; 
                         if(sfConnection.userInfo && sfConnection.userInfo.user_id && !sfConnection.userInfo.id) {
                             sfConnection.userInfo.id = sfConnection.userInfo.user_id;
                         }
@@ -643,11 +638,11 @@
                     }
                     console.log('Salesforce logout successful.');
                     sfConnection = null;
-                    jsforce.browser.clear(); // Important to clear jsforce's stored session
+                    jsforce.browser.clear(); 
                     updateSalesforceLoginStatus(false);
                 });
             } else {
-                jsforce.browser.clear(); // Ensure any lingering state is cleared
+                jsforce.browser.clear(); 
                 updateSalesforceLoginStatus(false); 
             }
         }
@@ -655,13 +650,12 @@
         async function sendToSalesforce() {
             if (!sfConnection || !sfConnection.accessToken) {
                 alert("Please login to Salesforce first.");
-                salesforceLogin(); // Attempt to login
+                salesforceLogin(); 
                 return;
             }
-             // CRITICAL: Check if userInfo and userInfo.id are available for Scanned_By_User__c if it's a lookup
-            if (!sfConnection.userInfo || !sfConnection.userInfo.id) {
+            if (!sfConnection.userInfo || !sfConnection.userInfo.id) { // Check added as per previous discussion if Scanned_By_User__c is lookup
                 alert("Salesforce user information is not available. Please try logging out and back in.");
-                console.error("Salesforce userInfo or userInfo.id is missing:", sfConnection.userInfo);
+                console.error("Salesforce userInfo or userInfo.id is missing for Scanned_By_User__c mapping:", sfConnection.userInfo);
                 updateSalesforceLoginStatus(true, "User info missing. Re-login needed."); 
                 return;
             }
@@ -682,8 +676,8 @@
             const platformEventsToSend = [];
             const sessionInfoData = {
                 location: locationSelect.value,
-                scannedByText: scannedByInput.value.trim(), // The text typed by the user
-                salesforceUserId: sfConnection.userInfo.id, // The ID of the logged-in Salesforce user
+                scannedByText: scannedByInput.value.trim(), 
+                // salesforceUserId: sfConnection.userInfo.id, // Use this if Scanned_By_User__c is a Lookup(User)
                 dateScanned: dateScannedInput.value
             };
 
@@ -701,10 +695,10 @@
 
                 const eventPayload = {
                     Location__c: sessionInfoData.location,
-                    Scanned_By_Name__c: sessionInfoData.scannedByText, // Example if you also have a text field for the name
-
+                    // Scanned_By_User__c: sessionInfoData.salesforceUserId, // If this is a Lookup(User)
+                    Scanned_By_User__c: sessionInfoData.scannedByText, // As per your request, not changing this. Ensure it's a Text field in SF.
                     Date_Scanned__c: new Date(sessionInfoData.dateScanned).toISOString(),
-                    QR_Code_Text__c: item.text, // This contains the "MANUAL: Make - VIN: Vin" string
+                    QR_Code_Text__c: item.text, 
                     Latitude__c: item.latitude,
                     Longitude__c: item.longitude,
                     Accuracy__c: item.accuracy,
@@ -712,18 +706,15 @@
                     Scan_Type__c: scanType,
                     Manual_Make__c: manualMake, 
                     Manual_VIN__c: manualVin,
-                    // ---- NEW: Populate lookup if SF ID exists ----
-                    // Replace 'Scanned_Trailer_Record__c' with your actual Lookup API name on the Platform Event
-                    // This field should be a Lookup to SF_VIN_SEARCH_OBJECT (e.g., Marine__Trailer__c)
-                    Scanned_Trailer_Record__c: item.salesforceId || null 
+                    // ---- CORRECTED: Send Salesforce ID as a TEXT field ----
+                    // Replace 'Linked_Trailer_ID__c' with your actual TEXT field API name on the Platform Event
+                    Linked_Trailer_ID__c: item.salesforceId || null 
                 };
                 
-                // Clean up payload - remove nulls if the PE field doesn't accept them or for cleaner data
-                if (!item.salesforceId) delete eventPayload.Scanned_Trailer_Record__c;
+                if (!item.salesforceId && eventPayload.hasOwnProperty('Linked_Trailer_ID__c')) delete eventPayload.Linked_Trailer_ID__c;
                 if (item.geoError === null || typeof item.geoError === 'undefined') delete eventPayload.Geolocation_Error__c;
                 if (manualMake === null && eventPayload.hasOwnProperty('Manual_Make__c')) delete eventPayload.Manual_Make__c;
                 if (manualVin === null && eventPayload.hasOwnProperty('Manual_VIN__c')) delete eventPayload.Manual_VIN__c;
-
 
                 platformEventsToSend.push(eventPayload);
             }
@@ -761,13 +752,11 @@
                 if (successCount === platformEventsToSend.length) {
                     scanStatusElement.textContent = `Successfully sent ${successCount} items to Salesforce!`;
                     scanStatusElement.className = 'status-success';
-                    scannedItems.length = 0; // Clear items after successful send
-                    updateScannedList(); // Update UI
+                    scannedItems.length = 0; 
+                    updateScannedList(); 
                 } else {
                     scanStatusElement.textContent = `Sent ${successCount}/${platformEventsToSend.length}. Errors: ${errorMessages.join(' | ')}`;
                     scanStatusElement.className = 'status-error';
-                    // Potentially, do not clear items if some failed, or selectively remove successful ones.
-                    // For now, all items are cleared only if all succeed.
                 }
 
             } catch (err) {
@@ -789,7 +778,7 @@
 
         function displayVinSearchResults(results) {
             if (!vinSearchResultsDiv) return;
-            clearVinSearchResults(); // Also clears display:none if it was set
+            clearVinSearchResults(); 
 
             if (!results || results.length === 0) {
                 vinSearchResultsDiv.innerHTML = '<div class="no-results">No matching VINs found.</div>';
@@ -799,11 +788,9 @@
 
             results.forEach(record => {
                 const itemDiv = document.createElement('div');
-
                 const vin = record[SF_VIN_FIELD_API_NAME] || 'N/A VIN';
                 const make = record[SF_MAKE_FIELD_API_NAME] || 'N/A Make';
                 const type = record[SF_TYPE_FIELD_API_NAME] || 'N/A Type';
-
                 let displayText = `${type} - ${make} - ${vin}`;
 
                 itemDiv.textContent = displayText;
@@ -814,7 +801,7 @@
                 itemDiv.addEventListener('click', () => {
                     if (manualVinInput) manualVinInput.value = itemDiv.dataset.vin;
                     if (manualMakeInput) manualMakeInput.value = itemDiv.dataset.make;
-                    selectedSalesforceTrailerId = itemDiv.dataset.id; // <-- STORE THE SELECTED ID
+                    selectedSalesforceTrailerId = itemDiv.dataset.id; 
                     console.log("Selected Salesforce Trailer ID:", selectedSalesforceTrailerId); 
                     clearVinSearchResults();
                 });
@@ -878,7 +865,7 @@
         }
 
         function handleVinInput() {
-            selectedSalesforceTrailerId = null; // <-- RESET ID if user types in VIN field
+            selectedSalesforceTrailerId = null; 
             clearTimeout(vinSearchDebounceTimer);
             const searchTerm = manualVinInput.value.trim(); 
             if (searchTerm.length >= MIN_VIN_SEARCH_LENGTH) {
@@ -897,7 +884,6 @@
             scannedItems.forEach(item => {
                 const listItem = document.createElement('li');
                 let displayText = item.text;
-                // <-- MODIFIED to show SF Linked ID -->
                 if (item.salesforceId) {
                     displayText += ` <strong style="color: #28a745;">(SF Linked: ${item.salesforceId.substring(0, 6)}...)</strong>`;
                 }
@@ -923,11 +909,13 @@
                     permissionStatus.onchange = () => updateCheckLocationButtonText(permissionStatus.state);
                 } catch (e) {
                     console.warn("Error querying geolocation permissions:", e);
-                    checkLocationButton.textContent = "Enable Location (Click)";
+                    if (checkLocationButton) checkLocationButton.textContent = "Enable Location (Click)";
                 }
             } else {
-                checkLocationButton.textContent = navigator.geolocation ? "Check Location Manually" : "Location N/A";
-                if (!navigator.geolocation) checkLocationButton.disabled = true;
+                if (checkLocationButton) {
+                    checkLocationButton.textContent = navigator.geolocation ? "Check Location Manually" : "Location N/A";
+                    if (!navigator.geolocation) checkLocationButton.disabled = true;
+                }
             }
         }
 
@@ -940,10 +928,10 @@
             } else if (state === 'denied') {
                 checkLocationButton.textContent = 'Location Denied';
                 checkLocationButton.style.backgroundColor = '#dc3545';
-                checkLocationButton.disabled = false; // User can click to re-trigger prompt via requestGeolocationPermission
-            } else { // prompt or undefined
+                checkLocationButton.disabled = false; 
+            } else { 
                 checkLocationButton.textContent = 'Enable Location';
-                checkLocationButton.style.backgroundColor = ''; // Reset to default
+                checkLocationButton.style.backgroundColor = ''; 
                 checkLocationButton.disabled = false;
             }
         }
@@ -956,7 +944,7 @@
                         scanStatusElement.textContent = errorMsg;
                         scanStatusElement.className = 'status-error';
                     }
-                    if (checkLocationButton) updateCheckLocationButtonText('denied'); // Update button state
+                    if (checkLocationButton) updateCheckLocationButtonText('denied'); 
                     reject(new Error(errorMsg));
                     return;
                 }
@@ -966,7 +954,7 @@
                             scanStatusElement.textContent = 'Location access granted!';
                             scanStatusElement.className = 'status-success';
                             setTimeout(() => {
-                                if (scanStatusElement.textContent === 'Location access granted!') { // Check if still relevant
+                                if (scanStatusElement && scanStatusElement.textContent === 'Location access granted!') { 
                                     scanStatusElement.textContent = 'Ready to scan.';
                                     scanStatusElement.className = 'status-info';
                                 }
@@ -981,7 +969,7 @@
                             latitude: position.coords.latitude,
                             longitude: position.coords.longitude,
                             accuracy: position.coords.accuracy,
-                            timestamp: new Date(position.timestamp).toISOString() // Use ISOString for consistency
+                            timestamp: new Date(position.timestamp).toISOString() 
                         });
                     },
                     (error) => {
@@ -999,7 +987,7 @@
                          if (checkLocationButton && typeof navigator.permissions?.query === 'function') {
                              navigator.permissions.query({name:'geolocation'}).then(ps => updateCheckLocationButtonText(ps.state));
                         } else if (checkLocationButton) {
-                            updateCheckLocationButtonText('denied'); // Or 'prompt' if distinguishable
+                            updateCheckLocationButtonText('denied'); 
                         }
                         reject(new Error(errorMessage));
                     },
@@ -1009,36 +997,44 @@
         }
 
         async function fetchCurrentLocation() {
-            return requestGeolocationPermission(false); // Not an explicit user click on "Check Location"
+            return requestGeolocationPermission(false); 
         }
 
         async function onScanSuccess(decodedText, decodedResult) {
             if (!scanStatusElement || !scanSuccessOverlay) return;
             const trimmedDecodedText = decodedText.trim();
             if (scannedItems.some(item => item.text === trimmedDecodedText)) {
-                scanStatusElement.textContent = `"${trimmedDecodedText.substring(0,20)}..." already scanned.`;
-                scanStatusElement.className = 'status-info';
+                if(scanStatusElement) {
+                    scanStatusElement.textContent = `"${trimmedDecodedText.substring(0,20)}..." already scanned.`;
+                    scanStatusElement.className = 'status-info';
+                }
                 return;
             }
-            scanSuccessOverlay.classList.add('visible');
-            scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Getting location...`;
-            scanStatusElement.className = 'status-info';
+            if(scanSuccessOverlay) scanSuccessOverlay.classList.add('visible');
+            if(scanStatusElement) {
+                scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Getting location...`;
+                scanStatusElement.className = 'status-info';
+            }
 
             let geoData = { latitude: null, longitude: null, accuracy: null, geoError: null, timestamp: new Date().toISOString() };
             try {
                 const location = await fetchCurrentLocation();
                 geoData = {...geoData, ...location}; 
-                scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Location captured!`;
-                scanStatusElement.className = 'status-success';
+                if(scanStatusElement) {
+                    scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Location captured!`;
+                    scanStatusElement.className = 'status-success';
+                }
             } catch (error) {
                 geoData.geoError = error.message;
-                scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Geo Error: ${error.message}`;
-                scanStatusElement.className = 'status-error'; // Keep as error for geo issues
+                if(scanStatusElement) {
+                    scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Geo Error: ${error.message}`;
+                    scanStatusElement.className = 'status-error'; 
+                }
             }
-            scannedItems.push({ text: trimmedDecodedText, salesforceId: null, ...geoData }); // QR scans won't have SF ID initially
+            scannedItems.push({ text: trimmedDecodedText, salesforceId: null, ...geoData }); 
             updateScannedList();
             if (navigator.vibrate) navigator.vibrate(100);
-            setTimeout(() => scanSuccessOverlay.classList.remove('visible'), 1200);
+            if(scanSuccessOverlay) setTimeout(() => scanSuccessOverlay.classList.remove('visible'), 1200);
         }
 
         function onScanFailure(error) { /* console.warn(`QR error = ${error}`); */ }
@@ -1050,7 +1046,7 @@
                     if(manualMakeInput) manualMakeInput.value = '';
                     if(manualVinInput) manualVinInput.value = '';
                     if(manualEntryStatus) manualEntryStatus.textContent = '';
-                    selectedSalesforceTrailerId = null; // <-- RESET ID when form is shown/cleared
+                    selectedSalesforceTrailerId = null; 
                     clearVinSearchResults(); 
                     if(manualMakeInput) manualMakeInput.focus();
                     if (html5QrCode && html5QrCode.isScanning) {
@@ -1060,7 +1056,7 @@
                         }
                     }
                 } else {
-                    selectedSalesforceTrailerId = null; // <-- RESET ID when form is hidden
+                    selectedSalesforceTrailerId = null; 
                     clearVinSearchResults();
                 }
             }
@@ -1077,12 +1073,9 @@
                 return;
             }
             
-            const currentSalesforceId = selectedSalesforceTrailerId; // Use the ID captured from search click
-
+            const currentSalesforceId = selectedSalesforceTrailerId; 
             let manualEntryText = `MANUAL: ${make} - VIN: ${vin}`;
-            // No need to append SFID to text, it's stored in item.salesforceId
-
-            // Check for duplicates
+            
             if (scannedItems.some(item => item.text.toUpperCase() === manualEntryText.toUpperCase() && item.salesforceId === currentSalesforceId )) {
                 manualEntryStatus.textContent = "This exact entry (including SF link) already exists.";
                 manualEntryStatus.style.color = 'orange';
@@ -1106,14 +1099,13 @@
 
             scannedItems.push({
                 text: manualEntryText,
-                salesforceId: currentSalesforceId, // <-- STORE THE SF ID
+                salesforceId: currentSalesforceId, 
                 ...geoData
             });
             updateScannedList();
             if (navigator.vibrate) navigator.vibrate(50);
             
-            selectedSalesforceTrailerId = null; // <-- RESET after adding
-            // Form fields will be cleared by toggleManualEntryForm(false)
+            selectedSalesforceTrailerId = null; 
             setTimeout(() => {
                 toggleManualEntryForm(false);
             }, 1500);
@@ -1134,13 +1126,12 @@
             scanStatusElement.className = 'status-info';
             const config = { fps: 10, qrbox: { width: 250, height: 250 }, facingMode: "environment" };
             try {
-                if (!html5QrCode) { // Ensure instance is created only if null
+                if (!html5QrCode) { 
                     html5QrCode = new Html5Qrcode("qr-reader");
                 }
-                // Check if already scanning before starting
                 if (html5QrCode.isScanning) {
                     console.log("Scanner is already running.");
-                     scanStatusElement.textContent = 'Scanner is already active.';
+                     if(scanStatusElement) scanStatusElement.textContent = 'Scanner is already active.';
                     return;
                 }
                 html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
@@ -1177,9 +1168,8 @@
                         console.warn("Error from html5QrCode.stop() promise:", err);
                     })
                     .finally(() => {
-                        // html5QrCode = null; // Do not nullify instance, just clear div content
                         if (qrReaderDivForLibrary) {
-                            qrReaderDivForLibrary.innerHTML = ""; // Clear the video feed/UI
+                            qrReaderDivForLibrary.innerHTML = ""; 
                             console.log("qr-reader div cleared.");
                         }
                     });
@@ -1204,7 +1194,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             console.log("DOM fully loaded and parsed");
 
-            // Assign DOM elements to global variables
             locationSelect = document.getElementById('location');
             scannedByInput = document.getElementById('scannedBy');
             dateScannedInput = document.getElementById('dateScanned');
@@ -1241,7 +1230,6 @@
                 if (scanStatusElement) scanStatusElement.textContent = "Error initializing date.";
             }
 
-            // Attach Event Listeners
             if (salesforceLoginButton) salesforceLoginButton.onclick = salesforceLogin;
             else console.error("Salesforce login button not found!");
 
@@ -1258,24 +1246,21 @@
 
             if (checkLocationButton) {
                 checkLocationButton.addEventListener('click', () => {
-                    if (checkLocationButton) { // Check again in case it was removed
+                    if (checkLocationButton) { 
                         checkLocationButton.disabled = true;
                         checkLocationButton.textContent = "Checking...";
                     }
-                    requestGeolocationPermission(true) // isExplicitRequest = true
+                    requestGeolocationPermission(true) 
                         .catch(e => console.warn("Explicit geo request failed:", e.message))
                         .finally(() => {
-                            // The updateCheckLocationButtonText is called within requestGeolocationPermission
-                            // so explicit re-enabling here might not be needed if permissions API is available.
-                            // However, as a fallback if permissions API didn't update it:
                              if (checkLocationButton && checkLocationButton.textContent === "Checking..." && checkLocationButton.disabled) {
                                 setTimeout(() => {
                                     if (checkLocationButton && checkLocationButton.textContent === "Checking..."){ 
                                         checkLocationButton.disabled = false;
                                         checkLocationButton.textContent = "Retry Location";
-                                        updateCheckLocationButtonText('prompt'); // or denied if that was the outcome
+                                        updateCheckLocationButtonText('prompt'); 
                                     }
-                                }, 1000); // give it a second for permission API to respond
+                                }, 1000); 
                             }
                         });
                 });
