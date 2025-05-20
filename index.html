@@ -443,6 +443,9 @@
             <div class="form-group">
                 <label for="manualVin">VIN:</label>
                 <input type="text" id="manualVin" placeholder="Enter trailer VIN">
+                <small id="vinSearchHelp" style="display: block; font-size: 0.8em; color: #555; margin-top: 3px;">
+                    Type at least {{MIN_VIN_SEARCH_LENGTH}} characters to search.
+                </small>
                 <div id="vinSearchResults" class="vin-search-results"></div>
             </div>
             <button id="addManualEntryButton" class="controls-button" style="margin-right: 10px;">Add to List</button>
@@ -500,6 +503,7 @@
         const SF_MAKE_FIELD_API_NAME = 'Marine__Make__c'; // Or 'Manufacturer_Name__c' etc. - THE FIELD STORING THE MAKE
                                                // If Make is not on the same object, this gets more complex (separate query or relationship)
                                                // For simplicity, let's assume Make is on the same object or you'll handle it.
+        const SF_TYPE_FIELD_API_NAME = 'Marine__Type__c';
         const MIN_VIN_SEARCH_LENGTH = 4; // Min characters before triggering search
 
         let sfConnection = null;
@@ -515,7 +519,7 @@
             toggleManualEntryButton, manualEntryFormContainer, manualMakeInput,
             manualVinInput, addManualEntryButton, cancelManualEntryButton, manualEntryStatus,
             salesforceLoginButton, salesforceStatusElement;
-        let vinSearchResultsDiv;
+        let vinSearchResultsDiv, vinSearchHelpText;
 
 
         // --- Salesforce Authentication & Utility Functions ---
@@ -753,20 +757,24 @@
         results.forEach(record => {
             const itemDiv = document.createElement('div');
             // Adjust displayed text based on your SF_VIN_FIELD_API_NAME and what you want to show
-            let displayText = record[SF_VIN_FIELD_API_NAME] || 'N/A VIN';
-            if (SF_MAKE_FIELD_API_NAME && record[SF_MAKE_FIELD_API_NAME]) {
-                displayText = `${record[SF_MAKE_FIELD_API_NAME]} - ${displayText}`;
-            }
+            const vin = record[SF_VIN_FIELD_API_NAME] || 'N/A VIN';
+            const make = record[SF_MAKE_FIELD_API_NAME] || 'N/A Make';
+            const type = record[SF_TYPE_FIELD_API_NAME] || 'N/A Type'; // <-- Get Type
+            
+            // Construct display text: e.g., "Trailer Type - Make - VIN"
+            let displayText = `${type} - ${make} - ${vin}`;
+
             itemDiv.textContent = displayText;
-            itemDiv.dataset.vin = record[SF_VIN_FIELD_API_NAME];
-            itemDiv.dataset.make = record[SF_MAKE_FIELD_API_NAME] || ''; // Handle if make is not present
-            itemDiv.dataset.id = record.Id; // Store SF ID if needed for future use
+            itemDiv.dataset.vin = vin;
+            itemDiv.dataset.make = make;
+            // itemDiv.dataset.type = type; // Optionally store type if needed later
+            itemDiv.dataset.id = record.Id;
 
             itemDiv.addEventListener('click', () => {
                 if (manualVinInput) manualVinInput.value = itemDiv.dataset.vin;
                 if (manualMakeInput) manualMakeInput.value = itemDiv.dataset.make;
+                // You might want to populate a "Type" field if you add one to the manual entry form
                 clearVinSearchResults();
-                // Optionally, you could focus the next logical field or the "Add to List" button
             });
             vinSearchResultsDiv.appendChild(itemDiv);
         });
@@ -798,11 +806,14 @@
         if (SF_MAKE_FIELD_API_NAME) { // Only add Make field if it's configured
             fieldsToSelect.push(SF_MAKE_FIELD_API_NAME);
         }
+        if (SF_TYPE_FIELD_API_NAME) { // <-- Add Type field to query
+            fieldsToSelect.push(SF_TYPE_FIELD_API_NAME);
+        }
 
-        const soqlQuery = `
+         const soqlQuery = `
             SELECT ${fieldsToSelect.join(', ')}
             FROM ${SF_VIN_SEARCH_OBJECT}
-            WHERE ${SF_VIN_FIELD_API_NAME} LIKE '${partialVin}%'
+            WHERE ${SF_VIN_FIELD_API_NAME} LIKE '${partialVin.replace(/'/g, "\\'")}%'
             ORDER BY ${SF_VIN_FIELD_API_NAME} ASC
             LIMIT 10
         `;
@@ -1144,6 +1155,11 @@
             salesforceLoginButton = document.getElementById('salesforceLoginButton');
             salesforceStatusElement = document.getElementById('salesforceStatus');
             vinSearchResultsDiv = document.getElementById('vinSearchResults'); // Assign new element
+            vinSearchHelpText = document.getElementById('vinSearchHelp'); // <-- Assign new help text element
+
+            if (vinSearchHelpText) {
+            vinSearchHelpText.textContent = `Type at least ${MIN_VIN_SEARCH_LENGTH} characters to search.`;
+        }
 
             // Initial date setup
             try {
