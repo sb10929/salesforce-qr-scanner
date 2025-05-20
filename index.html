@@ -253,6 +253,30 @@
             cursor: pointer;
             font-size: 1em;
         }
+
+        .vin-search-results {
+            position: absolute; /* Or relative to a positioned parent if needed */
+            background-color: white;
+            border: 1px solid #ccc;
+            border-top: none;
+            z-index: 1000; /* Ensure it's above other elements */
+            width: calc(100% - 2px); /* Match input width, adjust for border */
+            max-height: 150px;
+            overflow-y: auto;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .vin-search-results div {
+            padding: 8px 10px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .vin-search-results div:hover {
+            background-color: #f0f0f0;
+        }
+        .vin-search-results div.no-results {
+            cursor: default;
+            color: #777;
+        }
         .manual-entry-controls button:hover {
             background-color: #138496;
         }
@@ -419,6 +443,7 @@
             <div class="form-group">
                 <label for="manualVin">VIN:</label>
                 <input type="text" id="manualVin" placeholder="Enter trailer VIN">
+                <div id="vinSearchResults" class="vin-search-results"></div>
             </div>
             <button id="addManualEntryButton" class="controls-button" style="margin-right: 10px;">Add to List</button>
             <button id="cancelManualEntryButton" class="controls-button" style="background-color: #6c757d;">Cancel</button>
@@ -470,10 +495,18 @@
         const SF_CLIENT_ID = '3MVG9CEn_O3jvv0xeuSn24uJCAhIryOkfnoEp2ZgmnvNi52WNzeAiPJL.30DLpudVIe0MTsA1RutfP7vq2abX'; // YOUR ACTUAL CLIENT ID
         const SF_REDIRECT_URI = 'https://sb10929.github.io/salesforce-qr-scanner/'; // YOUR ACTUAL CALLBACK URL
         const PLATFORM_EVENT_API_NAME = 'QR_Scan_Event__e'; // YOUR ACTUAL PLATFORM EVENT API NAME
+        const SF_VIN_SEARCH_OBJECT = 'Marine__Trailer__c'; // Or 'Trailer__c', 'Product2', etc.
+        const SF_VIN_FIELD_API_NAME = 'Marine__VIN__c'; // Or 'VIN__c', 'SerialNumber' etc. - THE FIELD STORING THE VIN
+        const SF_MAKE_FIELD_API_NAME = 'Marine__Make__c'; // Or 'Manufacturer_Name__c' etc. - THE FIELD STORING THE MAKE
+                                               // If Make is not on the same object, this gets more complex (separate query or relationship)
+                                               // For simplicity, let's assume Make is on the same object or you'll handle it.
+        const MIN_VIN_SEARCH_LENGTH = 4; // Min characters before triggering search
 
         let sfConnection = null;
         const scannedItems = [];
         let html5QrCode = null;
+        let vinSearchDebounceTimer = null; // For debouncing VIN search
+
 
         // --- DOM Element Variables (will be assigned in DOMContentLoaded) ---
         let locationSelect, scannedByInput, dateScannedInput, scannerViewportContainer,
@@ -482,6 +515,7 @@
             toggleManualEntryButton, manualEntryFormContainer, manualMakeInput,
             manualVinInput, addManualEntryButton, cancelManualEntryButton, manualEntryStatus,
             salesforceLoginButton, salesforceStatusElement;
+        let vinSearchResultsDiv;
 
 
         // --- Salesforce Authentication & Utility Functions ---
@@ -699,6 +733,112 @@
             }
         }
 
+        function clearVinSearchResults() {
+        if (vinSearchResultsDiv) {
+            vinSearchResultsDiv.innerHTML = '';
+            vinSearchResultsDiv.style.display = 'none';
+        }
+    }
+
+    function displayVinSearchResults(results) {
+        if (!vinSearchResultsDiv) return;
+        clearVinSearchResults();
+
+        if (!results || results.length === 0) {
+            vinSearchResultsDiv.innerHTML = '<div class="no-results">No matching VINs found.</div>';
+            vinSearchResultsDiv.style.display = 'block';
+            return;
+        }
+
+        results.forEach(record => {
+            const itemDiv = document.createElement('div');
+            // Adjust displayed text based on your SF_VIN_FIELD_API_NAME and what you want to show
+            let displayText = record[SF_VIN_FIELD_API_NAME] || 'N/A VIN';
+            if (SF_MAKE_FIELD_API_NAME && record[SF_MAKE_FIELD_API_NAME]) {
+                displayText = `${record[SF_MAKE_FIELD_API_NAME]} - ${displayText}`;
+            }
+            itemDiv.textContent = displayText;
+            itemDiv.dataset.vin = record[SF_VIN_FIELD_API_NAME];
+            itemDiv.dataset.make = record[SF_MAKE_FIELD_API_NAME] || ''; // Handle if make is not present
+            itemDiv.dataset.id = record.Id; // Store SF ID if needed for future use
+
+            itemDiv.addEventListener('click', () => {
+                if (manualVinInput) manualVinInput.value = itemDiv.dataset.vin;
+                if (manualMakeInput) manualMakeInput.value = itemDiv.dataset.make;
+                clearVinSearchResults();
+                // Optionally, you could focus the next logical field or the "Add to List" button
+            });
+            vinSearchResultsDiv.appendChild(itemDiv);
+        });
+        vinSearchResultsDiv.style.display = 'block';
+    }
+
+    async function searchVinsInSalesforce(partialVin) {
+        if (!sfConnection || !sfConnection.accessToken) {
+            console.log("Not logged into Salesforce. VIN search unavailable.");
+            // Optionally show a message in vinSearchResultsDiv
+            if (vinSearchResultsDiv) {
+                 vinSearchResultsDiv.innerHTML = '<div class="no-results">Login to Salesforce to search VINs.</div>';
+                 vinSearchResultsDiv.style.display = 'block';
+            }
+            return;
+        }
+        if (!partialVin || partialVin.length < MIN_VIN_SEARCH_LENGTH) {
+            clearVinSearchResults();
+            return;
+        }
+
+        if (vinSearchResultsDiv) {
+            vinSearchResultsDiv.innerHTML = '<div class="no-results">Searching...</div>';
+            vinSearchResultsDiv.style.display = 'block';
+        }
+
+        // Construct fields to select. Always include Id and the VIN field.
+        const fieldsToSelect = ['Id', SF_VIN_FIELD_API_NAME];
+        if (SF_MAKE_FIELD_API_NAME) { // Only add Make field if it's configured
+            fieldsToSelect.push(SF_MAKE_FIELD_API_NAME);
+        }
+
+        const soqlQuery = `
+            SELECT ${fieldsToSelect.join(', ')}
+            FROM ${SF_VIN_SEARCH_OBJECT}
+            WHERE ${SF_VIN_FIELD_API_NAME} LIKE '${partialVin}%'
+            ORDER BY ${SF_VIN_FIELD_API_NAME} ASC
+            LIMIT 10
+        `;
+        // Note: jsforce typically handles escaping for query, but be mindful with dynamic SOQL.
+        // The LIKE '${partialVin}%' is generally safe here.
+
+        try {
+            console.log("Executing SOQL for VIN search:", soqlQuery);
+            const result = await sfConnection.query(soqlQuery);
+            console.log("VIN Search results:", result);
+            if (result.records) {
+                displayVinSearchResults(result.records);
+            } else {
+                displayVinSearchResults([]);
+            }
+        } catch (err) {
+            console.error('Salesforce VIN search error:', err);
+            if (vinSearchResultsDiv) {
+                vinSearchResultsDiv.innerHTML = `<div class="no-results">Error searching: ${err.message}</div>`;
+                vinSearchResultsDiv.style.display = 'block';
+            }
+        }
+    }
+
+    function handleVinInput() {
+        clearTimeout(vinSearchDebounceTimer);
+        const searchTerm = manualVinInput.value.trim();
+        if (searchTerm.length >= MIN_VIN_SEARCH_LENGTH) {
+            vinSearchDebounceTimer = setTimeout(() => {
+                searchVinsInSalesforce(searchTerm);
+            }, 500); // Debounce for 500ms
+        } else {
+            clearVinSearchResults(); // Clear if input is too short
+        }
+    }
+
         // --- QR Scanner & App Logic Functions ---
         function updateScannedList() {
             if (!scannedItemsListElement) return;
@@ -852,13 +992,17 @@
                     if(manualMakeInput) manualMakeInput.value = '';
                     if(manualVinInput) manualVinInput.value = '';
                     if(manualEntryStatus) manualEntryStatus.textContent = '';
+                    clearVinSearchResults(); // Clear any old search results
                     if(manualMakeInput) manualMakeInput.focus();
                     if (html5QrCode && html5QrCode.isScanning) {
                         stopScanning();
                         scanStatusElement.textContent = "Scanner stopped for manual entry.";
-                    }
                 }
+            } else {
+                clearVinSearchResults(); // Clear when hiding form
             }
+        }
+    }
         }
 
         async function handleAddManualEntry() {
@@ -999,6 +1143,7 @@
             manualEntryStatus = document.getElementById('manualEntryStatus');
             salesforceLoginButton = document.getElementById('salesforceLoginButton');
             salesforceStatusElement = document.getElementById('salesforceStatus');
+            vinSearchResultsDiv = document.getElementById('vinSearchResults'); // Assign new element
 
             // Initial date setup
             try {
@@ -1058,6 +1203,17 @@
             if (cancelManualEntryButton) {
                 cancelManualEntryButton.addEventListener('click', () => toggleManualEntryForm(false));
             } else console.error("cancelManualEntryButton not found!");
+
+             if (manualVinInput) {
+            manualVinInput.addEventListener('input', handleVinInput);
+            // Clear results if user clicks outside the input/results
+            manualVinInput.addEventListener('blur', () => {
+                // Delay hiding to allow click on search results
+                setTimeout(clearVinSearchResults, 200);
+            });
+        } else {
+            console.error("manualVinInput not found!");
+        }
 
 
             // Initial UI states and checks
