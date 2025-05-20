@@ -438,6 +438,7 @@
                 clientId: SF_CLIENT_ID,
                 redirectUri: SF_REDIRECT_URI,
                 loginUrl: SF_LOGIN_URL,
+                version: '58.0'
             });
             jsforce.browser.login({}, function(err, userInfo) {
                 if (err) {
@@ -452,27 +453,29 @@
         }
 
         function checkSalesforceSession() {
-            console.log("Checking Salesforce session...");
-            if (typeof jsforce === 'undefined') {
-                console.error("jsforce library is not loaded for session check!");
-                return;
-            }
-            jsforce.browser.init({
-                clientId: SF_CLIENT_ID,
-                redirectUri: SF_REDIRECT_URI,
-                loginUrl: SF_LOGIN_URL
-            });
-            jsforce.browser.checkLoginStatus(function(err, userInfo) {
-                if (err || !userInfo || !userInfo.id) { // More robust check for userInfo
-                    console.warn("No active Salesforce session or error checking status:", err || "No userInfo");
-                    updateSalesforceLoginStatus(false);
-                    return;
-                }
-                console.log("Salesforce session active. User ID: " + userInfo.id);
-                sfConnection = jsforce.browser.connection;
-                updateSalesforceLoginStatus(true);
-            });
-        }
+    console.log("Checking Salesforce session (v2)..."); // Added v2 for clarity
+    if (typeof jsforce === 'undefined') {
+        console.error("jsforce library is not loaded for session check!");
+        return;
+    }
+
+    jsforce.browser.init({
+    clientId: SF_CLIENT_ID,
+    redirectUri: SF_REDIRECT_URI,
+    loginUrl: SF_LOGIN_URL,
+    version: '58.0' // Or another recent, valid API version (e.g., 59.0, 60.0)
+});
+
+    // After init, check if jsforce restored a connection
+    if (jsforce.browser.connection && jsforce.browser.connection.accessToken) {
+        sfConnection = jsforce.browser.connection;
+        console.log("Salesforce session restored. User ID: " + (sfConnection.userInfo ? sfConnection.userInfo.id : "N/A"));
+        updateSalesforceLoginStatus(true);
+    } else {
+        console.log("No active Salesforce session found by jsforce.browser.connection.");
+        updateSalesforceLoginStatus(false);
+    }
+}
 
         function salesforceLogout() {
             console.log("Attempting Salesforce logout...");
