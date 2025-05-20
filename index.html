@@ -405,10 +405,11 @@
             if (isLoggedIn) {
                 salesforceLoginButton.textContent = 'Logout from Salesforce';
                 salesforceLoginButton.onclick = salesforceLogout;
-                if (sfConnection && sfConnection.userInfo) {
-                    salesforceStatusElement.textContent = `Logged in as ${sfConnection.userInfo.preferred_username || sfConnection.userInfo.name}.`;
+                if (sfConnection && sfConnection.userInfo && sfConnection.userInfo.id) {
+                    salesforceStatusElement.textContent = `Logged in as ${sfConnection.userInfo.preferred_username || sfConnection.userInfo.display_name || sfConnection.userInfo.username || 'User'}.`;
                 } else {
-                    salesforceStatusElement.textContent = 'Logged in (user info pending).';
+                    salesforceStatusElement.textContent = 'Logged in (User details pending/unavailable).';
+            console.warn("sfConnection.userInfo seems incomplete:", sfConnection ? sfConnection.userInfo : "sfConnection is null");
                 }
                 salesforceStatusElement.className = 'status-success';
                 if (sendButton) sendButton.disabled = scannedItems.length === 0;
