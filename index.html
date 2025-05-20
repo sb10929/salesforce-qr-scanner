@@ -299,6 +299,7 @@
             cursor: not-allowed;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsforce/1.11.1/jsforce.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
@@ -376,6 +377,11 @@
 
         <div id="scan-status" class="status-info">Initializing...</div>
 
+<div style="margin-bottom: 20px; padding: 10px; background-color: #eef; border-radius: 5px;">
+    <button id="salesforceLoginButton" class="controls button" style="background-color: #ff7f0e;">Login to Salesforce</button>
+    <div id="salesforceStatus" class="status-info" style="margin-top: 10px;">Not logged into Salesforce. Please login to send data.</div>
+</div>
+
         <div class="controls">
             <button id="startButton">Start Scanning</button>
             <button id="stopButton" disabled>Stop Scanning</button>
@@ -394,6 +400,18 @@
             const locationSelect = document.getElementById('location');
             const scannedByInput = document.getElementById('scannedBy');
             const dateScannedInput = document.getElementById('dateScanned');
+
+            // Add a login button to your HTML, for example, near the send button
+    // <button id="salesforceLoginButton">Login to Salesforce</button>
+    // <div id="salesforceStatus" class="status-info">Not logged in.</div>
+    const loginButton = document.getElementById('salesforceLoginButton');
+    if(loginButton) loginButton.onclick = salesforceLogin;
+
+    checkSalesforceSession(); // Check for existing session on page load
+
+    // Initialize send button state
+    if(sendButton) sendButton.disabled = true; // Disabled until logged in and items exist
+
             
             // IMPORTANT: qrReaderElement now refers to the new container for scrolling purposes if needed,
             // but the Html5Qrcode library still targets the inner div with id="qr-reader"
@@ -418,6 +436,10 @@
             // --- Global State ---
             const scannedItems = [];
             let html5QrCode = null;
+            let sfConnection = null;
+            const SF_LOGIN_URL = 'https://login.salesforce.com'; // Or your My Domain or test.salesforce.com for sandboxes
+            const SF_CLIENT_ID = '3MVG9CEn_O3jvv0xeuSn24uJCAhIryOkfnoEp2ZgmnvNi52WNzeAiPJL.30DLpudVIe0MTsA1RutfP7vq2abX'; // Paste your Consumer Key here
+            const SF_REDIRECT_URI = 'https://sb10929.github.io/salesforce-qr-scanner/'; // The one you configured in the Connected App
 
             // --- Initialization ---
             try {
@@ -436,6 +458,189 @@
             }
 
             // --- Helper Function Definitions ---
+
+            // --- New function to initiate login ---
+function salesforceLogin() {
+    if (sfConnection && sfConnection.accessToken) {
+        console.log("Already logged in to Salesforce.");
+        updateSalesforceLoginStatus(true);
+        return;
+    }
+    jsforce.browser.init({
+        clientId: SF_CLIENT_ID,
+        redirectUri: SF_REDIRECT_URI,
+        loginUrl: SF_LOGIN_URL, // Optional, defaults to login.salesforce.com
+        // version: '58.0' // Optional: specify API version
+    });
+    jsforce.browser.login({}, function(err, userInfo) {
+        if (err) {
+            console.error("Salesforce login error:", err);
+            updateSalesforceLoginStatus(false, `Login failed: ${err.message || err}`);
+            return alert('Salesforce login failed: ' + (err.message || err));
+        }
+        console.log("Salesforce login successful. User ID: " + userInfo.id + ", Org ID: " + userInfo.organizationId);
+        sfConnection = jsforce.browser.connection; // Get the connection object
+        updateSalesforceLoginStatus(true);
+        // You might want to enable the "Send to Salesforce" button here
+        if(sendButton) sendButton.disabled = scannedItems.length === 0;
+    });
+}
+
+// --- New function to check login status on page load (handles redirect from Salesforce) ---
+function checkSalesforceSession() {
+    jsforce.browser.init({
+        clientId: SF_CLIENT_ID,
+        redirectUri: SF_REDIRECT_URI,
+        loginUrl: SF_LOGIN_URL
+    });
+    jsforce.browser.checkLoginStatus(function(err, userInfo) {
+        if (err) {
+            console.warn("Not logged into Salesforce or error checking status:", err);
+            updateSalesforceLoginStatus(false);
+            return;
+        }
+        if (userInfo) {
+            console.log("Salesforce session active. User ID: " + userInfo.id);
+            sfConnection = jsforce.browser.connection;
+            updateSalesforceLoginStatus(true);
+            if(sendButton) sendButton.disabled = scannedItems.length === 0;
+        } else {
+            console.log("No active Salesforce session.");
+            updateSalesforceLoginStatus(false);
+        }
+    });
+}
+
+// --- Function to update UI based on login status ---
+function updateSalesforceLoginStatus(isLoggedIn, message) {
+    const loginButton = document.getElementById('salesforceLoginButton'); // You'll add this button
+    const sfStatusElement = document.getElementById('salesforceStatus'); // You'll add this div
+    if (!loginButton || !sfStatusElement) return;
+
+    if (isLoggedIn) {
+        loginButton.textContent = 'Logout from Salesforce';
+        loginButton.onclick = salesforceLogout;
+        sfStatusElement.textContent = `Logged in as ${jsforce.browser.connection.userInfo.preferred_username || jsforce.browser.connection.userInfo.name}.`;
+        sfStatusElement.className = 'status-success';
+        if(sendButton && scannedItems.length > 0) sendButton.disabled = false; else if(sendButton) sendButton.disabled = true;
+
+    } else {
+        loginButton.textContent = 'Login to Salesforce';
+        loginButton.onclick = salesforceLogin;
+        sfStatusElement.textContent = message || 'Not logged into Salesforce. Please login to send data.';
+        sfStatusElement.className = message ? 'status-error' : 'status-info';
+        if(sendButton) sendButton.disabled = true; // Disable send if not logged in
+    }
+}
+
+// --- New function to logout ---
+function salesforceLogout() {
+    if (sfConnection) {
+        sfConnection.logout(function(err) {
+            if (err) { return console.error('Salesforce logout error', err); }
+            console.log('Salesforce logout successful.');
+            sfConnection = null;
+            jsforce.browser.clear(); // Clear session info stored by jsforce
+            updateSalesforceLoginStatus(false);
+             if(sendButton) sendButton.disabled = true;
+        });
+    } else {
+         updateSalesforceLoginStatus(false);
+    }
+}
+
+
+// --- Modify your sendToSalesforce function ---
+async function sendToSalesforce() {
+    if (!sfConnection || !sfConnection.accessToken) {
+        alert("Please login to Salesforce first.");
+        salesforceLogin(); // Optionally trigger login
+        return;
+    }
+    if (scannedItems.length === 0) {
+        alert("No items to send.");
+        return;
+    }
+    if (!scannedByInput.value.trim()) {
+        alert("Please ensure 'Scanned By' field is filled.");
+        scannedByInput.focus();
+        return;
+    }
+
+ scanStatusElement.textContent = 'Preparing data for Salesforce...';
+    scanStatusElement.className = 'status-info';
+    sendButton.disabled = true;
+
+    const platformEventsToSend = [];
+    const sessionInfo = {
+        location: locationSelect.value,
+        scannedBy: scannedByInput.value.trim(),
+        dateScanned: dateScannedInput.value
+    };
+
+    for (const item of scannedItems) {
+        let scanType = "QR";
+        let manualMake = null;
+        let manualVin = null;
+
+        if (item.text.startsWith("MANUAL:")) {
+            scanType = "MANUAL";
+            // Basic parsing, adjust if your manual entry format is different
+            const parts = item.text.replace("MANUAL:", "").trim().split("- VIN:");
+            manualMake = parts[0]?.trim();
+            manualVin = parts[1]?.trim();
+        }
+
+        platformEventsToSend.push({
+            Location__c: sessionInfo.location,
+            Scanned_By_User__c: sessionInfo.scannedBy,
+            Date_Scanned__c: new Date(sessionInfo.dateScanned).toISOString(), // Send as ISOString for DateTime fields
+            QR_Code_Text__c: item.text,
+            Latitude__c: item.latitude,
+            Longitude__c: item.longitude,
+            Accuracy__c: item.accuracy,
+            Geolocation_Timestamp__c: item.timestamp ? new Date(item.timestamp).toISOString() : null,
+            Scan_Type__c: scanType,
+            Manual_Make__c: manualMake,
+            Manual_VIN__c: manualVin
+        });
+    }
+
+    try {
+        // 'QR_Scan_Event__e' should be replaced with your Platform Event's API Name
+        const results = await sfConnection.sobject('QR_Scan_Event__e').create(platformEventsToSend);
+        console.log("Platform Events published:", results);
+
+        let successCount = 0;
+        let errorMessages = [];
+        results.forEach(result => {
+            if (result.success) {
+                successCount++;
+            } else {
+                errorMessages.push(`Failed for item: ${JSON.stringify(result.errors)}`);
+            }
+        });
+
+        if (successCount === platformEventsToSend.length) {
+            scanStatusElement.textContent = `Successfully sent ${successCount} items to Salesforce!`;
+            scanStatusElement.className = 'status-success';
+            scannedItems.length = 0; // Clear the list after successful send
+            updateScannedList();
+        } else {
+            scanStatusElement.textContent = `Sent ${successCount}/${platformEventsToSend.length}. Errors: ${errorMessages.join('; ')}`;
+            scanStatusElement.className = 'status-error';
+            // Decide if you want to clear partially successful items or allow retry
+        }
+
+    } catch (err) {
+        console.error("Error publishing Platform Events:", err);
+        scanStatusElement.textContent = `Error sending to Salesforce: ${err.message || JSON.stringify(err)}`;
+        scanStatusElement.className = 'status-error';
+    } finally {
+        sendButton.disabled = scannedItems.length === 0 || !sfConnection;
+    }
+}
+    
             function updateScannedList() {
                 if (!scannedItemsListElement) return;
                 scannedItemsListElement.innerHTML = '';
