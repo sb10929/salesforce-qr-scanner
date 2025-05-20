@@ -73,26 +73,22 @@
             background-color: #e9ecef;
         }
 
-        /* NEW: Container for qr-reader and its overlay */
         .scanner-viewport-container {
-            position: relative; /* This is the new positioning context for the overlay */
+            position: relative;
             width: 100%;
-            max-width: 400px; /* Matches your #qr-reader max-width */
-            margin: 20px auto; /* Matches your #qr-reader margin */
-            border-radius: 8px; /* Optional: if you want the container to have rounded corners */
-            overflow: hidden; /* Optional: if overlay might peek out due to transforms */
+            max-width: 400px;
+            margin: 20px auto;
+            border-radius: 8px;
+            overflow: hidden;
         }
 
         #qr-reader {
-            width: 100%; /* Will fill scanner-viewport-container */
-            /* max-width, margin, and position:relative removed from here */
-            border: 1px solid #ddd; /* Keep border for visual separation if desired */
-            border-radius: 8px; /* Keep if you want rounded corners on camera itself */
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 8px;
             background-color: #333;
-            /* overflow: hidden; still good here to clip video */
         }
         
-        /* This style targets elements created by html5-qrcode library itself */
         #qr-reader__dashboard_section_csr span button {
             background-color: #0070d2 !important;
             color: white !important;
@@ -105,11 +101,10 @@
             background-color: #005fb3 !important;
         }
 
-
         #scan-success-overlay {
             position: absolute;
             top: 50%;
-            left: 50%; /* Now relative to .scanner-viewport-container */
+            left: 50%;
             transform: translate(-50%, -50%);
             background-color: rgba(40, 167, 69, 0.85);
             color: white;
@@ -118,14 +113,12 @@
             font-size: 1.2em;
             font-weight: bold;
             text-align: center;
-            z-index: 100; /* Ensure it's above #qr-reader and its contents */
+            z-index: 100;
             opacity: 0;
             transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
             pointer-events: none;
             display: flex;
             align-items: center;
-            /* max-width: 90%; /* Optional: to prevent overlay from being too wide */
-            /* box-sizing: border-box; /* Optional: if padding makes it too wide */
         }
 
         #scan-success-overlay.visible {
@@ -164,48 +157,44 @@
             cursor: not-allowed;
         }
 
-            .manual-entry-controls button { /* Style for the toggle button */
-        background-color: #17a2b8; /* Teal/Info color */
-        color: white;
-        border: none;
-        padding: 10px 15px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 1em;
-    }
-    .manual-entry-controls button:hover {
-        background-color: #138496;
-    }
+        .manual-entry-controls button {
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .manual-entry-controls button:hover {
+            background-color: #138496;
+        }
 
-    #manualEntryFormContainer h3 {
-        margin-top: 0;
-        color: #333;
-    }
+        #manualEntryFormContainer h3 {
+            margin-top: 0;
+            color: #333;
+        }
 
-    /* Re-using .controls button style for add/cancel, or define new ones */
-    #manualEntryFormContainer .controls-button {
-        /* If you used a class like .controls button for main controls */
-        /* you can add it to the manual entry buttons too */
-        /* Or define specific styles here: */
-        padding: 10px 15px;
-        font-size: 0.9em;
-        border-radius: 4px;
-        cursor: pointer;
-        border:none;
-        color: white;
-    }
-    #addManualEntryButton {
-        background-color: #0070d2; /* Salesforce Blue */
-    }
-    #addManualEntryButton:hover {
-        background-color: #005fb3;
-    }
-    #cancelManualEntryButton {
-        background-color: #6c757d; /* Grey */
-    }
-    #cancelManualEntryButton:hover {
-        background-color: #5a6268;
-    }
+        #manualEntryFormContainer .controls-button {
+            padding: 10px 15px;
+            font-size: 0.9em;
+            border-radius: 4px;
+            cursor: pointer;
+            border:none;
+            color: white;
+        }
+        #addManualEntryButton {
+            background-color: #0070d2;
+        }
+        #addManualEntryButton:hover {
+            background-color: #005fb3;
+        }
+        #cancelManualEntryButton {
+            background-color: #6c757d;
+        }
+        #cancelManualEntryButton:hover {
+            background-color: #5a6268;
+        }
 
         #scan-status {
             margin-top: 15px;
@@ -224,13 +213,11 @@
             color: #28a745;
             border: 1px solid #c3e6cb;
         }
-
         .status-error {
             background-color: #ffebee;
             color: #dc3545;
             border: 1px solid #f5c6cb;
         }
-
         .status-info {
             background-color: #e7f3fe;
             color: #007bff;
@@ -241,13 +228,11 @@
             margin-top: 20px;
             text-align: left;
         }
-
         #scanned-items-container h2 {
             font-size: 18px;
             color: #555;
             margin-bottom: 10px;
         }
-
         #scanned-items-list {
             list-style-type: none;
             padding: 0;
@@ -257,7 +242,6 @@
             border-radius: 5px;
             padding: 10px;
         }
-
         #scanned-items-list li {
             padding: 8px 0;
             border-bottom: 1px solid #f0f0f0;
@@ -299,6 +283,7 @@
             cursor: not-allowed;
         }
     </style>
+    <!-- JSForce library MUST be before your script -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsforce/1.11.1/jsforce.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
@@ -328,24 +313,23 @@
         </div>
 
         <div class="manual-entry-controls" style="margin-bottom: 20px;">
-        <button id="toggleManualEntryButton">Manual Entry</button>
-    </div>
+            <button id="toggleManualEntryButton">Manual Entry</button>
+        </div>
 
-    <div id="manualEntryFormContainer" style="display: none; background-color: #f0f8ff; padding: 15px; border-radius: 5px; margin-bottom: 20px; text-align: left;">
-        <h3>Manual Trailer Entry</h3>
-        <div class="form-group">
-            <label for="manualMake">Make:</label>
-            <input type="text" id="manualMake" placeholder="Enter trailer make">
+        <div id="manualEntryFormContainer" style="display: none; background-color: #f0f8ff; padding: 15px; border-radius: 5px; margin-bottom: 20px; text-align: left;">
+            <h3>Manual Trailer Entry</h3>
+            <div class="form-group">
+                <label for="manualMake">Make:</label>
+                <input type="text" id="manualMake" placeholder="Enter trailer make">
+            </div>
+            <div class="form-group">
+                <label for="manualVin">VIN:</label>
+                <input type="text" id="manualVin" placeholder="Enter trailer VIN">
+            </div>
+            <button id="addManualEntryButton" class="controls-button" style="margin-right: 10px;">Add to List</button>
+            <button id="cancelManualEntryButton" class="controls-button" style="background-color: #6c757d;">Cancel</button>
+            <div id="manualEntryStatus" style="margin-top: 10px; font-weight: bold;"></div>
         </div>
-        <div class="form-group">
-            <label for="manualVin">VIN:</label>
-            <input type="text" id="manualVin" placeholder="Enter trailer VIN">
-        </div>
-        <!-- Optional: Add more fields if needed -->
-        <button id="addManualEntryButton" class="controls-button" style="margin-right: 10px;">Add to List</button>
-        <button id="cancelManualEntryButton" class="controls-button" style="background-color: #6c757d;">Cancel</button>
-        <div id="manualEntryStatus" style="margin-top: 10px; font-weight: bold;"></div>
-    </div>
 
         <div class="instructions">
             <p><strong>Instructions:</strong></p>
@@ -357,15 +341,12 @@
                 <li>Point your camera at a QR code. Geolocation will be captured.</li>
                 <li>Scanned items will appear in the list below.</li>
                 <li>Click "Stop Scanning" to pause.</li>
-                <li>Click "Send to Salesforce" when done.</li>
+                <li>Click "Send to Salesforce" when done (must be logged in).</li>
             </ol>
         </div>
 
-        <!-- ***** MODIFIED HTML STRUCTURE for SCANNER AREA ***** -->
         <div class="scanner-viewport-container">
-            <div id="qr-reader">
-                <!-- html5-qrcode will render its video here. -->
-            </div>
+            <div id="qr-reader"></div>
             <div id="scan-success-overlay">
                 <svg viewBox="0 0 50 50">
                     <path fill="transparent" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
@@ -373,14 +354,13 @@
                 <span>Scan Successful!</span>
             </div>
         </div>
-        <!-- ***** END OF MODIFIED HTML STRUCTURE ***** -->
 
         <div id="scan-status" class="status-info">Initializing...</div>
 
-<div style="margin-bottom: 20px; padding: 10px; background-color: #eef; border-radius: 5px;">
-    <button id="salesforceLoginButton" class="controls button" style="background-color: #ff7f0e;">Login to Salesforce</button>
-    <div id="salesforceStatus" class="status-info" style="margin-top: 10px;">Not logged into Salesforce. Please login to send data.</div>
-</div>
+        <div style="margin-bottom: 20px; padding: 10px; background-color: #eef; border-radius: 5px;">
+            <button id="salesforceLoginButton" class="controls button" style="background-color: #ff7f0e;">Login to Salesforce</button>
+            <div id="salesforceStatus" class="status-info" style="margin-top: 10px;">Not logged into Salesforce. Please login to send data.</div>
+        </div>
 
         <div class="controls">
             <button id="startButton">Start Scanning</button>
@@ -395,689 +375,579 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- DOM Element Variables ---
-            const locationSelect = document.getElementById('location');
-            const scannedByInput = document.getElementById('scannedBy');
-            const dateScannedInput = document.getElementById('dateScanned');
+        // --- Global State & Salesforce Configuration ---
+        const SF_LOGIN_URL = 'https://login.salesforce.com'; // For Production/Dev Orgs
+        // const SF_LOGIN_URL = 'https://test.salesforce.com'; // For Sandboxes - UNCOMMENT IF USING SANDBOX
+        const SF_CLIENT_ID = '3MVG9CEn_O3jvv0xeuSn24uJCAhIryOkfnoEp2ZgmnvNi52WNzeAiPJL.30DLpudVIe0MTsA1RutfP7vq2abX'; // YOUR ACTUAL CLIENT ID
+        const SF_REDIRECT_URI = 'https://sb10929.github.io/salesforce-qr-scanner/'; // YOUR ACTUAL CALLBACK URL
+        const PLATFORM_EVENT_API_NAME = 'QR_Scan_Event__e'; // YOUR ACTUAL PLATFORM EVENT API NAME
 
-            // Add a login button to your HTML, for example, near the send button
-    // <button id="salesforceLoginButton">Login to Salesforce</button>
-    // <div id="salesforceStatus" class="status-info">Not logged in.</div>
-    const loginButton = document.getElementById('salesforceLoginButton');
-    if(loginButton) loginButton.onclick = salesforceLogin;
+        let sfConnection = null;
+        const scannedItems = [];
+        let html5QrCode = null;
 
-    checkSalesforceSession(); // Check for existing session on page load
+        // --- DOM Element Variables (will be assigned in DOMContentLoaded) ---
+        let locationSelect, scannedByInput, dateScannedInput, scannerViewportContainer,
+            qrReaderDivForLibrary, scanStatusElement, scannedItemsListElement,
+            startButton, stopButton, sendButton, checkLocationButton, scanSuccessOverlay,
+            toggleManualEntryButton, manualEntryFormContainer, manualMakeInput,
+            manualVinInput, addManualEntryButton, cancelManualEntryButton, manualEntryStatus,
+            salesforceLoginButton, salesforceStatusElement;
 
-    // Initialize send button state
-    if(sendButton) sendButton.disabled = true; // Disabled until logged in and items exist
 
-            
-            // IMPORTANT: qrReaderElement now refers to the new container for scrolling purposes if needed,
-            // but the Html5Qrcode library still targets the inner div with id="qr-reader"
-            const scannerViewportContainer = document.querySelector('.scanner-viewport-container'); 
-            const qrReaderDivForLibrary = document.getElementById('qr-reader'); // This is what html5-qrcode targets
+        // --- Salesforce Authentication & Utility Functions ---
+        function updateSalesforceLoginStatus(isLoggedIn, message) {
+            if (!salesforceLoginButton || !salesforceStatusElement) {
+                console.error("updateSalesforceLoginStatus: Salesforce UI elements not found.");
+                return;
+            }
 
-            const scanStatusElement = document.getElementById('scan-status');
-            const scannedItemsListElement = document.getElementById('scanned-items-list');
-            const startButton = document.getElementById('startButton');
-            const stopButton = document.getElementById('stopButton');
-            const sendButton = document.getElementById('sendButton');
-            const checkLocationButton = document.getElementById('checkLocationButton');
-            const scanSuccessOverlay = document.getElementById('scan-success-overlay'); // This will still be found
-            const toggleManualEntryButton = document.getElementById('toggleManualEntryButton');
-            const manualEntryFormContainer = document.getElementById('manualEntryFormContainer');
-            const manualMakeInput = document.getElementById('manualMake');
-            const manualVinInput = document.getElementById('manualVin');
-            const addManualEntryButton = document.getElementById('addManualEntryButton');
-            const cancelManualEntryButton = document.getElementById('cancelManualEntryButton');
-            const manualEntryStatus = document.getElementById('manualEntryStatus');
-
-            // --- Global State ---
-            const scannedItems = [];
-            let html5QrCode = null;
-            let sfConnection = null;
-            const SF_LOGIN_URL = 'https://login.salesforce.com'; // Or your My Domain or test.salesforce.com for sandboxes
-            const SF_CLIENT_ID = '3MVG9CEn_O3jvv0xeuSn24uJCAhIryOkfnoEp2ZgmnvNi52WNzeAiPJL.30DLpudVIe0MTsA1RutfP7vq2abX'; // Paste your Consumer Key here
-            const SF_REDIRECT_URI = 'https://sb10929.github.io/salesforce-qr-scanner/'; // The one you configured in the Connected App
-
-            // --- Initialization ---
-            try {
-                const today = new Date();
-                const yyyy = today.getFullYear();
-                const mm = String(today.getMonth() + 1).padStart(2, '0');
-                const dd = String(today.getDate()).padStart(2, '0');
-                if (dateScannedInput) {
-                    dateScannedInput.value = `${yyyy}-${mm}-${dd}`;
+            if (isLoggedIn) {
+                salesforceLoginButton.textContent = 'Logout from Salesforce';
+                salesforceLoginButton.onclick = salesforceLogout;
+                if (sfConnection && sfConnection.userInfo) {
+                    salesforceStatusElement.textContent = `Logged in as ${sfConnection.userInfo.preferred_username || sfConnection.userInfo.name}.`;
                 } else {
-                    console.error("dateScannedInput element not found!");
+                    salesforceStatusElement.textContent = 'Logged in (user info pending).';
                 }
-            } catch (e) {
-                console.error("Error setting date:", e);
-                if (scanStatusElement) scanStatusElement.textContent = "Error initializing date.";
-            }
-
-            // --- Helper Function Definitions ---
-
-            // --- New function to initiate login ---
-function salesforceLogin() {
-    if (sfConnection && sfConnection.accessToken) {
-        console.log("Already logged in to Salesforce.");
-        updateSalesforceLoginStatus(true);
-        return;
-    }
-    jsforce.browser.init({
-        clientId: SF_CLIENT_ID,
-        redirectUri: SF_REDIRECT_URI,
-        loginUrl: SF_LOGIN_URL, // Optional, defaults to login.salesforce.com
-        // version: '58.0' // Optional: specify API version
-    });
-    jsforce.browser.login({}, function(err, userInfo) {
-        if (err) {
-            console.error("Salesforce login error:", err);
-            updateSalesforceLoginStatus(false, `Login failed: ${err.message || err}`);
-            return alert('Salesforce login failed: ' + (err.message || err));
-        }
-        console.log("Salesforce login successful. User ID: " + userInfo.id + ", Org ID: " + userInfo.organizationId);
-        sfConnection = jsforce.browser.connection; // Get the connection object
-        updateSalesforceLoginStatus(true);
-        // You might want to enable the "Send to Salesforce" button here
-        if(sendButton) sendButton.disabled = scannedItems.length === 0;
-    });
-}
-
-// --- New function to check login status on page load (handles redirect from Salesforce) ---
-function checkSalesforceSession() {
-    jsforce.browser.init({
-        clientId: SF_CLIENT_ID,
-        redirectUri: SF_REDIRECT_URI,
-        loginUrl: SF_LOGIN_URL
-    });
-    jsforce.browser.checkLoginStatus(function(err, userInfo) {
-        if (err) {
-            console.warn("Not logged into Salesforce or error checking status:", err);
-            updateSalesforceLoginStatus(false);
-            return;
-        }
-        if (userInfo) {
-            console.log("Salesforce session active. User ID: " + userInfo.id);
-            sfConnection = jsforce.browser.connection;
-            updateSalesforceLoginStatus(true);
-            if(sendButton) sendButton.disabled = scannedItems.length === 0;
-        } else {
-            console.log("No active Salesforce session.");
-            updateSalesforceLoginStatus(false);
-        }
-    });
-}
-
-// --- Function to update UI based on login status ---
-function updateSalesforceLoginStatus(isLoggedIn, message) {
-    const loginButton = document.getElementById('salesforceLoginButton'); // You'll add this button
-    const sfStatusElement = document.getElementById('salesforceStatus'); // You'll add this div
-    if (!loginButton || !sfStatusElement) return;
-
-    if (isLoggedIn) {
-        loginButton.textContent = 'Logout from Salesforce';
-        loginButton.onclick = salesforceLogout;
-        sfStatusElement.textContent = `Logged in as ${jsforce.browser.connection.userInfo.preferred_username || jsforce.browser.connection.userInfo.name}.`;
-        sfStatusElement.className = 'status-success';
-        if(sendButton && scannedItems.length > 0) sendButton.disabled = false; else if(sendButton) sendButton.disabled = true;
-
-    } else {
-        loginButton.textContent = 'Login to Salesforce';
-        loginButton.onclick = salesforceLogin;
-        sfStatusElement.textContent = message || 'Not logged into Salesforce. Please login to send data.';
-        sfStatusElement.className = message ? 'status-error' : 'status-info';
-        if(sendButton) sendButton.disabled = true; // Disable send if not logged in
-    }
-}
-
-// --- New function to logout ---
-function salesforceLogout() {
-    if (sfConnection) {
-        sfConnection.logout(function(err) {
-            if (err) { return console.error('Salesforce logout error', err); }
-            console.log('Salesforce logout successful.');
-            sfConnection = null;
-            jsforce.browser.clear(); // Clear session info stored by jsforce
-            updateSalesforceLoginStatus(false);
-             if(sendButton) sendButton.disabled = true;
-        });
-    } else {
-         updateSalesforceLoginStatus(false);
-    }
-}
-
-
-// --- Modify your sendToSalesforce function ---
-async function sendToSalesforce() {
-    if (!sfConnection || !sfConnection.accessToken) {
-        alert("Please login to Salesforce first.");
-        salesforceLogin(); // Optionally trigger login
-        return;
-    }
-    if (scannedItems.length === 0) {
-        alert("No items to send.");
-        return;
-    }
-    if (!scannedByInput.value.trim()) {
-        alert("Please ensure 'Scanned By' field is filled.");
-        scannedByInput.focus();
-        return;
-    }
-
- scanStatusElement.textContent = 'Preparing data for Salesforce...';
-    scanStatusElement.className = 'status-info';
-    sendButton.disabled = true;
-
-    const platformEventsToSend = [];
-    const sessionInfo = {
-        location: locationSelect.value,
-        scannedBy: scannedByInput.value.trim(),
-        dateScanned: dateScannedInput.value
-    };
-
-    for (const item of scannedItems) {
-        let scanType = "QR";
-        let manualMake = null;
-        let manualVin = null;
-
-        if (item.text.startsWith("MANUAL:")) {
-            scanType = "MANUAL";
-            // Basic parsing, adjust if your manual entry format is different
-            const parts = item.text.replace("MANUAL:", "").trim().split("- VIN:");
-            manualMake = parts[0]?.trim();
-            manualVin = parts[1]?.trim();
-        }
-
-        platformEventsToSend.push({
-            Location__c: sessionInfo.location,
-            Scanned_By_User__c: sessionInfo.scannedBy,
-            Date_Scanned__c: new Date(sessionInfo.dateScanned).toISOString(), // Send as ISOString for DateTime fields
-            QR_Code_Text__c: item.text,
-            Latitude__c: item.latitude,
-            Longitude__c: item.longitude,
-            Accuracy__c: item.accuracy,
-            Geolocation_Timestamp__c: item.timestamp ? new Date(item.timestamp).toISOString() : null,
-            Scan_Type__c: scanType,
-            Manual_Make__c: manualMake,
-            Manual_VIN__c: manualVin
-        });
-    }
-
-    try {
-        // 'QR_Scan_Event__e' should be replaced with your Platform Event's API Name
-        const results = await sfConnection.sobject('QR_Scan_Event__e').create(platformEventsToSend);
-        console.log("Platform Events published:", results);
-
-        let successCount = 0;
-        let errorMessages = [];
-        results.forEach(result => {
-            if (result.success) {
-                successCount++;
-            } else {
-                errorMessages.push(`Failed for item: ${JSON.stringify(result.errors)}`);
-            }
-        });
-
-        if (successCount === platformEventsToSend.length) {
-            scanStatusElement.textContent = `Successfully sent ${successCount} items to Salesforce!`;
-            scanStatusElement.className = 'status-success';
-            scannedItems.length = 0; // Clear the list after successful send
-            updateScannedList();
-        } else {
-            scanStatusElement.textContent = `Sent ${successCount}/${platformEventsToSend.length}. Errors: ${errorMessages.join('; ')}`;
-            scanStatusElement.className = 'status-error';
-            // Decide if you want to clear partially successful items or allow retry
-        }
-
-    } catch (err) {
-        console.error("Error publishing Platform Events:", err);
-        scanStatusElement.textContent = `Error sending to Salesforce: ${err.message || JSON.stringify(err)}`;
-        scanStatusElement.className = 'status-error';
-    } finally {
-        sendButton.disabled = scannedItems.length === 0 || !sfConnection;
-    }
-}
-    
-            function updateScannedList() {
-                if (!scannedItemsListElement) return;
-                scannedItemsListElement.innerHTML = '';
-                scannedItems.forEach(item => {
-                    const listItem = document.createElement('li');
-                    let geoInfo = '';
-                    if (item.geoError) {
-                        geoInfo = `<span class="item-geo">(Geo: ${item.geoError})</span>`;
-                    } else if (item.latitude !== null && item.longitude !== null) {
-                        geoInfo = `<span class="item-geo">(Lat: ${item.latitude.toFixed(5)}, Lon: ${item.longitude.toFixed(5)}, Acc: ${item.accuracy}m)</span>`;
-                    }
-                    listItem.innerHTML = `${item.text} ${geoInfo}`;
-                    scannedItemsListElement.appendChild(listItem);
-                });
+                salesforceStatusElement.className = 'status-success';
                 if (sendButton) sendButton.disabled = scannedItems.length === 0;
+            } else {
+                salesforceLoginButton.textContent = 'Login to Salesforce';
+                salesforceLoginButton.onclick = salesforceLogin;
+                salesforceStatusElement.textContent = message || 'Not logged into Salesforce. Please login to send data.';
+                salesforceStatusElement.className = message ? 'status-error' : 'status-info';
+                if (sendButton) sendButton.disabled = true;
             }
+        }
 
-            async function checkInitialGeolocationPermission() {
-                 if (!checkLocationButton || !scanStatusElement) {
-                     console.error("Required elements for geo permission check not found (checkLocationButton or scanStatusElement).");
-                     if(checkLocationButton) checkLocationButton.textContent = "Geo Setup Error";
-                     return;
-                }
-                if (navigator.geolocation && typeof navigator.permissions !== 'undefined' && typeof navigator.permissions.query === 'function') {
-                    try {
-                        const permissionStatus = await navigator.permissions.query({name:'geolocation'});
-                        updateCheckLocationButtonText(permissionStatus.state);
-
-                        permissionStatus.onchange = () => {
-                            console.log('Geolocation permission state changed to:', permissionStatus.state);
-                            updateCheckLocationButtonText(permissionStatus.state);
-                            if (permissionStatus.state === 'denied' && !document.getElementById('forceGeoRequestBtnFromStatus')) {
-                                scanStatusElement.innerHTML = 'Location permission is denied. Please enable it in browser settings. <button id="forceGeoRequestBtnFromStatus" style="margin-left:5px; padding: 2px 5px;">Try Request</button>';
-                                scanStatusElement.className = 'status-error';
-                                const forceBtn = document.getElementById('forceGeoRequestBtnFromStatus');
-                                if(forceBtn) forceBtn.onclick = () => requestGeolocationPermission(true);
-                            } else if (permissionStatus.state === 'granted' && scanStatusElement.innerHTML.includes('Location permission is denied')) {
-                                scanStatusElement.textContent = 'Location permission granted.';
-                                scanStatusElement.className = 'status-success';
-                            }
-                        };
-                    } catch (e) {
-                        console.warn("Error querying geolocation permissions:", e);
-                        checkLocationButton.textContent = "Enable Location (Click)";
-                    }
-                } else {
-                    console.warn('Geolocation Permissions API not fully supported. Manual check needed.');
-                    checkLocationButton.textContent = "Check Location Manually";
-                    if (!navigator.geolocation) {
-                        checkLocationButton.disabled = true;
-                        checkLocationButton.textContent = "Location N/A";
-                         scanStatusElement.textContent = 'Geolocation is not supported by this browser.';
-                         scanStatusElement.className = 'status-error';
-                    }
-                }
+        function salesforceLogin() {
+            console.log("Attempting Salesforce login...");
+            if (sfConnection && sfConnection.accessToken) {
+                console.log("Already logged in.");
+                updateSalesforceLoginStatus(true);
+                return;
             }
-            
-            function updateCheckLocationButtonText(state) {
-                if (!checkLocationButton) return;
-                if (state === 'granted') {
-                    checkLocationButton.textContent = 'Location Enabled';
-                    checkLocationButton.style.backgroundColor = '#28a745';
-                    checkLocationButton.disabled = true;
-                } else if (state === 'denied') {
-                    checkLocationButton.textContent = 'Location Denied';
-                    checkLocationButton.style.backgroundColor = '#dc3545';
-                    checkLocationButton.disabled = false; 
-                } else { 
-                    checkLocationButton.textContent = 'Enable Location';
-                    checkLocationButton.style.backgroundColor = '';
-                    checkLocationButton.disabled = false;
-                }
+            if (typeof jsforce === 'undefined') {
+                console.error("jsforce library is not loaded!");
+                if(salesforceStatusElement) salesforceStatusElement.textContent = "Error: jsforce library not found.";
+                return;
             }
-
-            function requestGeolocationPermission(isExplicitRequest = false) {
-                return new Promise((resolve, reject) => {
-                    if (!navigator.geolocation) {
-                        const errorMsg = 'Geolocation is not supported by your browser.';
-                        if (isExplicitRequest && scanStatusElement) {
-                            scanStatusElement.textContent = errorMsg;
-                            scanStatusElement.className = 'status-error';
-                        }
-                        reject(new Error(errorMsg));
-                        return;
-                    }
-                    
-                    navigator.geolocation.getCurrentPosition(
-                        (position) => {
-                            if (isExplicitRequest && scanStatusElement) {
-                                scanStatusElement.textContent = 'Location access granted!';
-                                scanStatusElement.className = 'status-success';
-                                setTimeout(() => {
-                                    if (scanStatusElement && scanStatusElement.textContent === 'Location access granted!') {
-                                        scanStatusElement.textContent = 'Ready to scan.';
-                                        scanStatusElement.className = 'status-info';
-                                    }
-                                }, 3000);
-                            }
-                            if (isExplicitRequest && checkLocationButton && typeof navigator.permissions !== 'undefined' && typeof navigator.permissions.query === 'function') {
-                                navigator.permissions.query({name:'geolocation'}).then(ps => updateCheckLocationButtonText(ps.state));
-                            } else if (isExplicitRequest && checkLocationButton) {
-                                updateCheckLocationButtonText('granted');
-                            }
-
-                            resolve({
-                                latitude: position.coords.latitude,
-                                longitude: position.coords.longitude,
-                                accuracy: position.coords.accuracy,
-                                timestamp: new Date(position.timestamp).toISOString()
-                            });
-                        },
-                        (error) => {
-                            let errorMessage = 'Could not get location. ';
-                            switch(error.code) {
-                                case error.PERMISSION_DENIED:
-                                    errorMessage += "Permission denied.";
-                                    if (isExplicitRequest) errorMessage += " Please enable location in browser/OS settings.";
-                                    break;
-                                case error.POSITION_UNAVAILABLE: errorMessage += "Information unavailable."; break;
-                                case error.TIMEOUT: errorMessage += "Request timed out."; break;
-                                default: errorMessage += "Unknown error."; break;
-                            }
-                            if (isExplicitRequest && scanStatusElement) {
-                                scanStatusElement.textContent = errorMessage;
-                                scanStatusElement.className = 'status-error';
-                            }
-                            if (isExplicitRequest && checkLocationButton && typeof navigator.permissions !== 'undefined' && typeof navigator.permissions.query === 'function') {
-                                navigator.permissions.query({name:'geolocation'}).then(ps => updateCheckLocationButtonText(ps.state));
-                            } else if (isExplicitRequest && checkLocationButton) {
-                                updateCheckLocationButtonText('denied');
-                            }
-                            reject(new Error(errorMessage));
-                        },
-                        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                    );
-                });
-            }
-            
-            async function fetchCurrentLocation() {
-                return requestGeolocationPermission(false);
-            }
-
-            async function onScanSuccess(decodedText, decodedResult) {
-                if (!scanStatusElement || !scanSuccessOverlay) { // Ensure overlay is found
-                    console.error("Missing status or overlay element for onScanSuccess.");
+            jsforce.browser.init({
+                clientId: SF_CLIENT_ID,
+                redirectUri: SF_REDIRECT_URI,
+                loginUrl: SF_LOGIN_URL,
+            });
+            jsforce.browser.login({}, function(err, userInfo) {
+                if (err) {
+                    console.error("Salesforce login error:", err);
+                    updateSalesforceLoginStatus(false, `Login failed: ${err.message || 'Unknown error'}`);
                     return;
                 }
-                const trimmedDecodedText = decodedText.trim();
+                console.log("Salesforce login successful. User ID: " + userInfo.id + ", Org ID: " + userInfo.organizationId);
+                sfConnection = jsforce.browser.connection;
+                updateSalesforceLoginStatus(true);
+            });
+        }
 
-                if (scannedItems.some(item => item.text === trimmedDecodedText)) {
-                    scanStatusElement.textContent = 'Text already scanned.';
-                    scanStatusElement.className = 'status-info';
-                    return; // No success overlay for duplicates
+        function checkSalesforceSession() {
+            console.log("Checking Salesforce session...");
+            if (typeof jsforce === 'undefined') {
+                console.error("jsforce library is not loaded for session check!");
+                return;
+            }
+            jsforce.browser.init({
+                clientId: SF_CLIENT_ID,
+                redirectUri: SF_REDIRECT_URI,
+                loginUrl: SF_LOGIN_URL
+            });
+            jsforce.browser.checkLoginStatus(function(err, userInfo) {
+                if (err || !userInfo || !userInfo.id) { // More robust check for userInfo
+                    console.warn("No active Salesforce session or error checking status:", err || "No userInfo");
+                    updateSalesforceLoginStatus(false);
+                    return;
                 }
+                console.log("Salesforce session active. User ID: " + userInfo.id);
+                sfConnection = jsforce.browser.connection;
+                updateSalesforceLoginStatus(true);
+            });
+        }
 
-                console.log("Showing overlay..."); // DEBUG
-                scanSuccessOverlay.classList.add('visible');
-                
-                scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Getting location...`;
-                scanStatusElement.className = 'status-info';
+        function salesforceLogout() {
+            console.log("Attempting Salesforce logout...");
+            if (sfConnection) {
+                sfConnection.logout(function(err) {
+                    if (err) {
+                        console.error('Salesforce logout error', err);
+                        // Optionally update status to reflect logout attempt failed
+                        updateSalesforceLoginStatus(true, "Logout failed, still connected.");
+                        return;
+                    }
+                    console.log('Salesforce logout successful.');
+                    sfConnection = null;
+                    jsforce.browser.clear();
+                    updateSalesforceLoginStatus(false);
+                });
+            } else {
+                updateSalesforceLoginStatus(false); // Already logged out or no connection
+            }
+        }
 
-                let geoData = { latitude: null, longitude: null, accuracy: null, geoError: null, timestamp: new Date().toISOString() };
-
-                try {
-                    const location = await fetchCurrentLocation();
-                    geoData.latitude = location.latitude;
-                    geoData.longitude = location.longitude;
-                    geoData.accuracy = location.accuracy;
-                    geoData.timestamp = location.timestamp;
-                    scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Location captured!`;
-                    scanStatusElement.className = 'status-success';
-                } catch (error) {
-                    geoData.geoError = error.message;
-                    scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Geo Error: ${error.message}`;
-                    scanStatusElement.className = 'status-error';
-                }
-                
-                scannedItems.push({ text: trimmedDecodedText, ...geoData });
-                updateScannedList();
-                
-                if (navigator.vibrate) navigator.vibrate(100);
-
-                setTimeout(() => {
-                    console.log("Hiding overlay..."); // DEBUG
-                    scanSuccessOverlay.classList.remove('visible');
-                }, 1200);
+        async function sendToSalesforce() {
+            if (!sfConnection || !sfConnection.accessToken) {
+                alert("Please login to Salesforce first.");
+                salesforceLogin();
+                return;
+            }
+            if (scannedItems.length === 0) {
+                alert("No items to send.");
+                return;
+            }
+            if (!scannedByInput.value.trim()) {
+                alert("Please ensure 'Scanned By' field is filled.");
+                scannedByInput.focus();
+                return;
             }
 
-            function onScanFailure(error) { /* console.warn(`QR error = ${error}`); */ }
+            scanStatusElement.textContent = 'Preparing data for Salesforce...';
+            scanStatusElement.className = 'status-info';
+            sendButton.disabled = true;
 
-                    // --- NEW: Manual Entry Logic ---
+            const platformEventsToSend = [];
+            const sessionInfoData = {
+                location: locationSelect.value,
+                scannedBy: scannedByInput.value.trim(),
+                dateScanned: dateScannedInput.value
+            };
+
+            for (const item of scannedItems) {
+                let scanType = "QR";
+                let manualMake = null;
+                let manualVin = null;
+
+                if (item.text.startsWith("MANUAL:")) {
+                    scanType = "MANUAL";
+                    const parts = item.text.replace("MANUAL:", "").trim().split("- VIN:");
+                    manualMake = parts[0]?.trim();
+                    manualVin = parts[1]?.trim();
+                }
+
+                // IMPORTANT: Ensure these field API names EXACTLY match your Platform Event fields
+                const eventPayload = {
+                    Session_Location__c: sessionInfoData.location,       // Example: Location__c might be your field for location
+                    Scanned_By_User__c: sessionInfoData.scannedBy,
+                    Date_Scanned__c: new Date(sessionInfoData.dateScanned).toISOString(),
+                    QR_Code_Text__c: item.text,
+                    Latitude__c: item.latitude,
+                    Longitude__c: item.longitude,
+                    Accuracy__c: item.accuracy,
+                    Geolocation_Timestamp__c: item.timestamp ? new Date(item.timestamp).toISOString() : null,
+                    // Geolocation_Error__c: item.geoError, // Uncomment if you have this field
+                    Scan_Type__c: scanType,
+                    Manual_Make__c: manualMake,         // Uncomment if you have this field
+                    Manual_VIN__c: manualVin            // Uncomment if you have this field
+                };
+                // Remove fields from payload if they don't exist on your Platform Event
+                if (item.geoError === null || typeof item.geoError === 'undefined') delete eventPayload.Geolocation_Error__c;
+                if (manualMake === null) delete eventPayload.Manual_Make__c;
+                if (manualVin === null) delete eventPayload.Manual_VIN__c;
+
+
+                platformEventsToSend.push(eventPayload);
+            }
+
+            if (platformEventsToSend.length === 0) {
+                scanStatusElement.textContent = 'No valid items to send.';
+                scanStatusElement.className = 'status-info';
+                sendButton.disabled = false; // Or based on scannedItems.length
+                return;
+            }
+            
+            console.log("Payload to send:", JSON.stringify(platformEventsToSend, null, 2));
+
+            try {
+                const results = await sfConnection.sobject(PLATFORM_EVENT_API_NAME).create(platformEventsToSend);
+                console.log("Platform Events published response:", results);
+
+                let successCount = 0;
+                let errorMessages = [];
+                // Results can be a single object if only one event was sent, or an array if multiple
+                const resultsArray = Array.isArray(results) ? results : [results];
+
+                resultsArray.forEach(result => {
+                    if (result.success) {
+                        successCount++;
+                    } else {
+                        let errors = "Unknown error";
+                        if (result.errors && result.errors.length > 0) {
+                           errors = result.errors.map(e => `${e.statusCode}: ${e.message} [${(e.fields || []).join(',')}]`).join('; ');
+                        }
+                        errorMessages.push(`Failed: ${errors}`);
+                        console.error("Failed item details:", result);
+                    }
+                });
+
+                if (successCount === platformEventsToSend.length) {
+                    scanStatusElement.textContent = `Successfully sent ${successCount} items to Salesforce!`;
+                    scanStatusElement.className = 'status-success';
+                    scannedItems.length = 0;
+                    updateScannedList();
+                } else {
+                    scanStatusElement.textContent = `Sent ${successCount}/${platformEventsToSend.length}. Errors: ${errorMessages.join(' | ')}`;
+                    scanStatusElement.className = 'status-error';
+                }
+
+            } catch (err) {
+                console.error("Error publishing Platform Events:", err);
+                scanStatusElement.textContent = `Error sending to SF: ${err.message || JSON.stringify(err)}`;
+                scanStatusElement.className = 'status-error';
+            } finally {
+                if(sendButton) sendButton.disabled = scannedItems.length === 0 || !sfConnection;
+            }
+        }
+
+        // --- QR Scanner & App Logic Functions ---
+        function updateScannedList() {
+            if (!scannedItemsListElement) return;
+            scannedItemsListElement.innerHTML = '';
+            scannedItems.forEach(item => {
+                const listItem = document.createElement('li');
+                let geoInfo = '';
+                if (item.geoError) {
+                    geoInfo = `<span class="item-geo">(Geo: ${item.geoError})</span>`;
+                } else if (item.latitude !== null && item.longitude !== null) {
+                    geoInfo = `<span class="item-geo">(Lat: ${item.latitude.toFixed(5)}, Lon: ${item.longitude.toFixed(5)}, Acc: ${item.accuracy}m)</span>`;
+                }
+                listItem.innerHTML = `${item.text} ${geoInfo}`;
+                scannedItemsListElement.appendChild(listItem);
+            });
+            if (sendButton) sendButton.disabled = scannedItems.length === 0 || !sfConnection; // Also check sfConnection
+        }
+
+        async function checkInitialGeolocationPermission() {
+            if (!checkLocationButton || !scanStatusElement) return;
+            if (navigator.geolocation && typeof navigator.permissions?.query === 'function') {
+                try {
+                    const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+                    updateCheckLocationButtonText(permissionStatus.state);
+                    permissionStatus.onchange = () => updateCheckLocationButtonText(permissionStatus.state);
+                } catch (e) {
+                    console.warn("Error querying geolocation permissions:", e);
+                    checkLocationButton.textContent = "Enable Location (Click)";
+                }
+            } else {
+                checkLocationButton.textContent = navigator.geolocation ? "Check Location Manually" : "Location N/A";
+                if (!navigator.geolocation) checkLocationButton.disabled = true;
+            }
+        }
+
+        function updateCheckLocationButtonText(state) {
+            if (!checkLocationButton) return;
+            if (state === 'granted') {
+                checkLocationButton.textContent = 'Location Enabled';
+                checkLocationButton.style.backgroundColor = '#28a745';
+                checkLocationButton.disabled = true;
+            } else if (state === 'denied') {
+                checkLocationButton.textContent = 'Location Denied';
+                checkLocationButton.style.backgroundColor = '#dc3545';
+                checkLocationButton.disabled = false;
+            } else {
+                checkLocationButton.textContent = 'Enable Location';
+                checkLocationButton.style.backgroundColor = '';
+                checkLocationButton.disabled = false;
+            }
+        }
+
+        function requestGeolocationPermission(isExplicitRequest = false) {
+            return new Promise((resolve, reject) => {
+                if (!navigator.geolocation) {
+                    const errorMsg = 'Geolocation is not supported.';
+                    if (isExplicitRequest && scanStatusElement) {
+                        scanStatusElement.textContent = errorMsg;
+                        scanStatusElement.className = 'status-error';
+                    }
+                    reject(new Error(errorMsg));
+                    return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        if (isExplicitRequest && scanStatusElement) {
+                            scanStatusElement.textContent = 'Location access granted!';
+                            scanStatusElement.className = 'status-success';
+                            setTimeout(() => {
+                                if (scanStatusElement.textContent === 'Location access granted!') {
+                                    scanStatusElement.textContent = 'Ready to scan.';
+                                    scanStatusElement.className = 'status-info';
+                                }
+                            }, 2000);
+                        }
+                        if (typeof navigator.permissions?.query === 'function') {
+                             navigator.permissions.query({name:'geolocation'}).then(ps => updateCheckLocationButtonText(ps.state));
+                        } else {
+                            updateCheckLocationButtonText('granted');
+                        }
+                        resolve({
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                            accuracy: position.coords.accuracy,
+                            timestamp: new Date(position.timestamp).toISOString()
+                        });
+                    },
+                    (error) => {
+                        let errorMessage = 'Could not get location: ';
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED: errorMessage += "Permission denied."; break;
+                            case error.POSITION_UNAVAILABLE: errorMessage += "Unavailable."; break;
+                            case error.TIMEOUT: errorMessage += "Timeout."; break;
+                            default: errorMessage += "Unknown error."; break;
+                        }
+                        if (isExplicitRequest && scanStatusElement) {
+                            scanStatusElement.textContent = errorMessage;
+                            scanStatusElement.className = 'status-error';
+                        }
+                         if (typeof navigator.permissions?.query === 'function') {
+                             navigator.permissions.query({name:'geolocation'}).then(ps => updateCheckLocationButtonText(ps.state));
+                        } else {
+                            updateCheckLocationButtonText('denied');
+                        }
+                        reject(new Error(errorMessage));
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            });
+        }
+
+        async function fetchCurrentLocation() {
+            return requestGeolocationPermission(false);
+        }
+
+        async function onScanSuccess(decodedText, decodedResult) {
+            if (!scanStatusElement || !scanSuccessOverlay) return;
+            const trimmedDecodedText = decodedText.trim();
+            if (scannedItems.some(item => item.text === trimmedDecodedText)) {
+                scanStatusElement.textContent = 'Text already scanned.';
+                scanStatusElement.className = 'status-info';
+                return;
+            }
+            scanSuccessOverlay.classList.add('visible');
+            scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Getting location...`;
+            scanStatusElement.className = 'status-info';
+
+            let geoData = { latitude: null, longitude: null, accuracy: null, geoError: null, timestamp: new Date().toISOString() };
+            try {
+                const location = await fetchCurrentLocation();
+                geoData = {...geoData, ...location}; // Merge location data
+                scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Location captured!`;
+                scanStatusElement.className = 'status-success';
+            } catch (error) {
+                geoData.geoError = error.message;
+                scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Geo Error: ${error.message}`;
+                scanStatusElement.className = 'status-error';
+            }
+            scannedItems.push({ text: trimmedDecodedText, ...geoData });
+            updateScannedList();
+            if (navigator.vibrate) navigator.vibrate(100);
+            setTimeout(() => scanSuccessOverlay.classList.remove('visible'), 1200);
+        }
+
+        function onScanFailure(error) { /* console.warn(`QR error = ${error}`); */ }
+
         function toggleManualEntryForm(show) {
             if (manualEntryFormContainer) {
                 manualEntryFormContainer.style.display = show ? 'block' : 'none';
                 if (show) {
-                    // Optionally clear fields when showing
                     if(manualMakeInput) manualMakeInput.value = '';
                     if(manualVinInput) manualVinInput.value = '';
                     if(manualEntryStatus) manualEntryStatus.textContent = '';
                     if(manualMakeInput) manualMakeInput.focus();
-                    // If scanner is active, maybe stop it? Or disable manual entry button while scanning.
                     if (html5QrCode && html5QrCode.isScanning) {
-                        // alert("Please stop the QR scanner before manual entry.");
-                        // return false; // Prevent form from showing if scanner is active
-                        // Or, more gracefully:
-                        stopScanning(); // Stop the scanner if it's active
+                        stopScanning();
                         scanStatusElement.textContent = "Scanner stopped for manual entry.";
                     }
                 }
             }
-            return true; // Indicate success/failure if needed later
         }
 
         async function handleAddManualEntry() {
             if (!manualMakeInput || !manualVinInput || !manualEntryStatus) return;
-
             const make = manualMakeInput.value.trim();
             const vin = manualVinInput.value.trim();
-
             if (!make || !vin) {
                 manualEntryStatus.textContent = "Make and VIN are required.";
                 manualEntryStatus.style.color = 'red';
                 return;
             }
-
-            // Construct the text for the list. You can format this as needed.
-            // Prepending "MANUAL:" to distinguish from QR scans.
             const manualEntryText = `MANUAL: ${make} - VIN: ${vin}`;
-
-            // Check for duplicates (optional, but good idea)
             if (scannedItems.some(item => item.text.toUpperCase() === manualEntryText.toUpperCase())) {
-                manualEntryStatus.textContent = "This entry already exists in the list.";
+                manualEntryStatus.textContent = "This entry already exists.";
                 manualEntryStatus.style.color = 'orange';
                 return;
             }
-            
             manualEntryStatus.textContent = "Getting location for manual entry...";
             manualEntryStatus.style.color = 'blue';
-
-
             let geoData = { latitude: null, longitude: null, accuracy: null, geoError: null, timestamp: new Date().toISOString() };
-
             try {
-                // Reuse geolocation fetching logic
-                const location = await fetchCurrentLocation(); // Assumes fetchCurrentLocation is defined
-                geoData.latitude = location.latitude;
-                geoData.longitude = location.longitude;
-                geoData.accuracy = location.accuracy;
-                geoData.timestamp = location.timestamp; // Use timestamp from geolocation
+                const location = await fetchCurrentLocation();
+                geoData = {...geoData, ...location};
                 manualEntryStatus.textContent = "Manual entry added with location!";
                 manualEntryStatus.style.color = 'green';
-
             } catch (error) {
                 geoData.geoError = error.message;
                 manualEntryStatus.textContent = `Manual entry added. Geo Error: ${error.message}`;
-                manualEntryStatus.style.color = 'darkorange'; // Entry added, but geo failed
-                console.warn(`Geolocation error for manual entry "${manualEntryText}": ${error.message}`);
+                manualEntryStatus.style.color = 'darkorange';
             }
-
-
-            scannedItems.push({
-                text: manualEntryText,
-                ...geoData
-                // You could add more specific fields here if your Salesforce payload needs them structured
-                // e.g., type: 'manual', make: make, vin: vin, 
-            });
-
+            scannedItems.push({ text: manualEntryText, ...geoData });
             updateScannedList();
-            if (navigator.vibrate) navigator.vibrate(50); // Shorter vibration for manual
-
-            // Clear fields and hide form after a short delay to show success message
-            setTimeout(() => {
-                toggleManualEntryForm(false);
-            }, 1500);
+            if (navigator.vibrate) navigator.vibrate(50);
+            setTimeout(() => toggleManualEntryForm(false), 1500);
         }
 
-
-        // --- Attach Event Listeners & Initial Calls ---
-        // ... (existing event listeners: startButton, stopButton, etc.) ...
-
-        if (toggleManualEntryButton) {
-            toggleManualEntryButton.addEventListener('click', () => {
-                // Toggle visibility: if it's 'none' or empty, show it, otherwise hide it.
-                const currentlyVisible = manualEntryFormContainer.style.display === 'block';
-                toggleManualEntryForm(!currentlyVisible);
-            });
-        } else {
-            console.error("toggleManualEntryButton not found!");
+        function startScanning() {
+            if (!scannedByInput || !startButton || !stopButton || !locationSelect || !scanStatusElement || !qrReaderDivForLibrary || !scannerViewportContainer) return;
+            if (!scannedByInput.value.trim()) {
+                alert("Please enter your name in 'Scanned By' field.");
+                scannedByInput.focus();
+                return;
+            }
+            startButton.disabled = true;
+            stopButton.disabled = false;
+            locationSelect.disabled = true;
+            scannedByInput.disabled = true;
+            scanStatusElement.textContent = 'Initializing scanner...';
+            scanStatusElement.className = 'status-info';
+            const config = { fps: 10, qrbox: { width: 250, height: 250 }, facingMode: "environment" };
+            try {
+                html5QrCode = new Html5Qrcode("qr-reader");
+                html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
+                    .then(() => {
+                        scanStatusElement.textContent = 'Scanner started. Point camera at QR code.';
+                        if (scannerViewportContainer) scannerViewportContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    })
+                    .catch(err => {
+                        scanStatusElement.textContent = `Error starting scanner: ${err.message}.`;
+                        scanStatusElement.className = 'status-error';
+                        stopScanning(); // Clean up
+                    });
+            } catch (e) {
+                scanStatusElement.textContent = `Scanner lib error: ${e.message}.`;
+                scanStatusElement.className = 'status-error';
+                stopScanning(); // Clean up
+            }
         }
 
-        if (addManualEntryButton) {
-            addManualEntryButton.addEventListener('click', handleAddManualEntry);
-        } else {
-            console.error("addManualEntryButton not found!");
+        function stopScanning() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().catch(err => console.error("Error stopping scanner:", err));
+            }
+            if (scanStatusElement && !scanStatusElement.textContent.startsWith("Error starting scanner")) {
+                 scanStatusElement.textContent = 'Scanner stopped.';
+                 scanStatusElement.className = 'status-info';
+            }
+            if(qrReaderDivForLibrary) qrReaderDivForLibrary.innerHTML = "";
+            if(startButton) startButton.disabled = false;
+            if(stopButton) stopButton.disabled = true;
+            if(locationSelect) locationSelect.disabled = false;
+            if(scannedByInput) scannedByInput.disabled = false;
+            html5QrCode = null;
         }
 
-        if (cancelManualEntryButton) {
-            cancelManualEntryButton.addEventListener('click', () => {
-                toggleManualEntryForm(false);
-            });
-        } else {
-            console.error("cancelManualEntryButton not found!");
-        }
+        // --- DOMContentLoaded: Initialization and Event Binding ---
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM fully loaded and parsed");
 
-            function startScanning() {
-                if (!scannedByInput || !startButton || !stopButton || !locationSelect || !scanStatusElement || !qrReaderDivForLibrary || !scannerViewportContainer ) {
-                    console.error("Missing critical elements for startScanning.");
-                    if (scanStatusElement) scanStatusElement.textContent = "UI Error, cannot start.";
-                    return;
-                }
-                if (!scannedByInput.value.trim()) {
-                    alert("Please enter your name in 'Scanned By' field.");
-                    scannedByInput.focus();
-                    return;
-                }
-                startButton.disabled = true;
-                stopButton.disabled = false;
-                locationSelect.disabled = true;
-                scannedByInput.disabled = true;
-                scanStatusElement.textContent = 'Initializing scanner... Requesting camera...';
-                scanStatusElement.className = 'status-info';
-                const config = { fps: 10, qrbox: { width: 250, height: 250 }, facingMode: "environment" };
-                
-                try {
-                    // The library now targets the inner div 'qr-reader'
-                    html5QrCode = new Html5Qrcode("qr-reader"); // TARGETS THE INNER DIV ID
-                    html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
-                        .then(() => {
-                            scanStatusElement.textContent = 'Scanner started. Point camera at QR code.';
-                            scanStatusElement.className = 'status-info';
-                            // Scroll the outer container into view
-                            if (scannerViewportContainer) {
-                                scannerViewportContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }
-                        })
-                        .catch(err => {
-                            console.error("Failed to start scanner", err);
-                            scanStatusElement.textContent = `Error starting scanner: ${err.message}.`;
-                            scanStatusElement.className = 'status-error';
-                            stopScanning();
-                        });
-                } catch (e) {
-                     console.error("Error creating Html5Qrcode instance:", e);
-                     scanStatusElement.textContent = `Scanner lib error: ${e.message}.`;
-                     scanStatusElement.className = 'status-error';
-                     stopScanning();
-                }
+            // Assign DOM elements to global variables
+            locationSelect = document.getElementById('location');
+            scannedByInput = document.getElementById('scannedBy');
+            dateScannedInput = document.getElementById('dateScanned');
+            scannerViewportContainer = document.querySelector('.scanner-viewport-container');
+            qrReaderDivForLibrary = document.getElementById('qr-reader');
+            scanStatusElement = document.getElementById('scan-status');
+            scannedItemsListElement = document.getElementById('scanned-items-list');
+            startButton = document.getElementById('startButton');
+            stopButton = document.getElementById('stopButton');
+            sendButton = document.getElementById('sendButton');
+            checkLocationButton = document.getElementById('checkLocationButton');
+            scanSuccessOverlay = document.getElementById('scan-success-overlay');
+            toggleManualEntryButton = document.getElementById('toggleManualEntryButton');
+            manualEntryFormContainer = document.getElementById('manualEntryFormContainer');
+            manualMakeInput = document.getElementById('manualMake');
+            manualVinInput = document.getElementById('manualVin');
+            addManualEntryButton = document.getElementById('addManualEntryButton');
+            cancelManualEntryButton = document.getElementById('cancelManualEntryButton');
+            manualEntryStatus = document.getElementById('manualEntryStatus');
+            salesforceLoginButton = document.getElementById('salesforceLoginButton');
+            salesforceStatusElement = document.getElementById('salesforceStatus');
+
+            // Initial date setup
+            try {
+                const today = new Date();
+                dateScannedInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            } catch (e) {
+                console.error("Error setting date:", e);
+                if (scanStatusElement) scanStatusElement.textContent = "Error initializing date.";
             }
 
-            function stopScanning() {
-                if (html5QrCode && html5QrCode.isScanning) {
-                    html5QrCode.stop().catch(err => console.error("Error stopping scanner quietly", err));
-                }
-                if(scanStatusElement && scanStatusElement.textContent.startsWith("Error starting scanner")) {
-                    // Keep error message
-                } else if (scanStatusElement) {
-                     scanStatusElement.textContent = 'Scanner stopped.';
-                     scanStatusElement.className = 'status-info';
-                }
-                // IMPORTANT: Clear the inner div targeted by the library, not the overlay's parent
-                if(qrReaderDivForLibrary) qrReaderDivForLibrary.innerHTML = ""; 
-                
-                if(startButton) startButton.disabled = false;
-                if(stopButton) stopButton.disabled = true;
-                if(locationSelect) locationSelect.disabled = false;
-                if(scannedByInput) scannedByInput.disabled = false;
-                html5QrCode = null;
-            }
+            // Attach Event Listeners
+            if (salesforceLoginButton) salesforceLoginButton.onclick = salesforceLogin;
+            else console.error("Salesforce login button not found!");
 
-            async function sendToSalesforce() {
-                // ... (This function remains the same as your last working version)
-                 if (scannedItems.length === 0) {
-                    alert("No items to send.");
-                    return;
-                }
-                if (!scannedByInput.value.trim()) {
-                    alert("Please ensure 'Scanned By' field is filled.");
-                    scannedByInput.focus();
-                    return;
-                }
-
-                const payload = {
-                    sessionInfo: {
-                        location: locationSelect.value,
-                        scannedBy: scannedByInput.value.trim(),
-                        dateScanned: dateScannedInput.value
-                    },
-                    scannedItems: scannedItems
-                };
-                const jsonData = JSON.stringify(payload, null, 2);
-
-                console.log("Payload to send to Salesforce:", jsonData);
-                scanStatusElement.textContent = 'Preparing data for Salesforce...';
-                scanStatusElement.className = 'status-info';
-
-                scanStatusElement.textContent = 'Simulating send... Check console for JSON.';
-                scanStatusElement.className = 'status-info';
-                setTimeout(() => {
-                    alert("Simulated Send Complete!\n\nPayload:\n" + jsonData + "\n\nCheck console. Implement actual Salesforce call.");
-                    scanStatusElement.textContent = 'Simulated send complete. Data logged to console.';
-                    scanStatusElement.className = 'status-success';
-                }, 1500);
-            }
-
-            // --- Attach Event Listeners & Initial Calls ---
             if (startButton) startButton.addEventListener('click', startScanning);
             else console.error("startButton not found!");
+
             if (stopButton) stopButton.addEventListener('click', stopScanning);
             else console.error("stopButton not found!");
-            if (sendButton) sendButton.addEventListener('click', sendToSalesforce);
-            else console.error("sendButton not found!");
+
+            if (sendButton) {
+                sendButton.addEventListener('click', sendToSalesforce);
+                sendButton.disabled = true; // Initially disabled
+            } else console.error("sendButton not found!");
+
             if (checkLocationButton) {
-                checkLocationButton.addEventListener('click', async () => {
+                checkLocationButton.addEventListener('click', () => {
                     checkLocationButton.disabled = true;
                     checkLocationButton.textContent = "Checking...";
-                    try {
-                        await requestGeolocationPermission(true);
-                    } catch(e) { /* Handled in requestGeo */ }
-                    if (!(navigator.permissions && typeof navigator.permissions.query === 'function')) {
-                         setTimeout(() => { if(checkLocationButton && checkLocationButton.textContent === "Checking...") {
-                            checkLocationButton.disabled = false;
-                            checkLocationButton.textContent = "Retry Location";
-                         } }, 2000);
-                    }
+                    requestGeolocationPermission(true)
+                        .catch(e => console.warn("Explicit geo request failed:", e))
+                        .finally(() => {
+                            // Re-enable button if not granted and no permissions API to auto-update
+                            if (!(navigator.permissions && typeof navigator.permissions.query === 'function') &&
+                                checkLocationButton.textContent === "Checking...") {
+                                    setTimeout(() => {
+                                        if (checkLocationButton.textContent === "Checking..."){ // still checking means it likely failed silently
+                                            checkLocationButton.disabled = false;
+                                            checkLocationButton.textContent = "Retry Location";
+                                        }
+                                    }, 1000);
+                            }
+                        });
                 });
-            } else {
-                console.error("checkLocationButton not found!");
-            }
+            } else console.error("checkLocationButton not found!");
 
+            if (toggleManualEntryButton) {
+                toggleManualEntryButton.addEventListener('click', () => {
+                    const isVisible = manualEntryFormContainer.style.display === 'block';
+                    toggleManualEntryForm(!isVisible);
+                });
+            } else console.error("toggleManualEntryButton not found!");
+
+            if (addManualEntryButton) addManualEntryButton.addEventListener('click', handleAddManualEntry);
+            else console.error("addManualEntryButton not found!");
+
+            if (cancelManualEntryButton) {
+                cancelManualEntryButton.addEventListener('click', () => toggleManualEntryForm(false));
+            } else console.error("cancelManualEntryButton not found!");
+
+
+            // Initial UI states and checks
             if (scanStatusElement) {
-                scanStatusElement.textContent = 'Fill session info & click "Start Scanning".';
+                scanStatusElement.textContent = 'Fill session info & click "Start Scanning". Or login to Salesforce.';
                 scanStatusElement.className = 'status-info';
-            } else {
-                console.error("scanStatusElement not found!");
             }
             checkInitialGeolocationPermission();
-            try {
+            checkSalesforceSession(); // Check for existing Salesforce session
+
+            // Camera check
+            if (typeof Html5Qrcode !== 'undefined') {
                 Html5Qrcode.getCameras().then(devices => {
                     if (!devices || !devices.length) {
                         if (scanStatusElement) {
@@ -1094,9 +964,12 @@ async function sendToSalesforce() {
                     if (startButton) startButton.disabled = true;
                     console.error("Error getting cameras", err);
                 });
-            } catch (e) {
-                console.error("Error during Html5Qrcode.getCameras():", e);
-                if (scanStatusElement) scanStatusElement.textContent = "Camera check library error.";
+            } else {
+                console.error("Html5Qrcode library not loaded for camera check!");
+                 if (scanStatusElement) {
+                    scanStatusElement.textContent = 'QR Scanner library not loaded.';
+                    scanStatusElement.className = 'status-error';
+                }
                 if (startButton) startButton.disabled = true;
             }
         });
