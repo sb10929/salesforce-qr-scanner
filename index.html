@@ -701,12 +701,7 @@
 
                 const eventPayload = {
                     Location__c: sessionInfoData.location,
-                    // IMPORTANT: If Scanned_By_User__c is a LOOKUP to User, use salesforceUserId.
-                    // If it's a TEXT field, use sessionInfoData.scannedByText.
-                    // The JSON_PARSER_ERROR you previously had suggests it might be a lookup.
-                    // Please verify this field type in your Salesforce Platform Event definition.
-                    Scanned_By_User__c: sessionInfoData.salesforceUserId, // ASSUMING LOOKUP TO USER
-                    // Scanned_By_Name__c: sessionInfoData.scannedByText, // Example if you also have a text field for the name
+                    Scanned_By_Name__c: sessionInfoData.scannedByText, // Example if you also have a text field for the name
 
                     Date_Scanned__c: new Date(sessionInfoData.dateScanned).toISOString(),
                     QR_Code_Text__c: item.text, // This contains the "MANUAL: Make - VIN: Vin" string
