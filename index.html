@@ -929,20 +929,49 @@
         }
 
         function stopScanning() {
-            if (html5QrCode && html5QrCode.isScanning) {
-                html5QrCode.stop().catch(err => console.error("Error stopping scanner:", err));
-            }
-            if (scanStatusElement && !scanStatusElement.textContent.startsWith("Error starting scanner")) {
-                 scanStatusElement.textContent = 'Scanner stopped.';
-                 scanStatusElement.className = 'status-info';
-            }
-            if(qrReaderDivForLibrary) qrReaderDivForLibrary.innerHTML = "";
-            if(startButton) startButton.disabled = false;
-            if(stopButton) stopButton.disabled = true;
-            if(locationSelect) locationSelect.disabled = false;
-            if(scannedByInput) scannedByInput.disabled = false;
-            html5QrCode = null;
+    if (html5QrCode && html5QrCode.isScanning) {
+        console.log("Attempting to stop html5QrCode scanner...");
+        html5QrCode.stop()
+            .then(() => {
+                console.log("html5QrCode scanner stopped successfully via promise.");
+            })
+            .catch(err => {
+                // Log the error, but don't let it break the rest of the logout
+                console.warn("Error from html5QrCode.stop() promise:", err);
+            })
+            .finally(() => {
+                // This block will run whether stop() succeeded or failed
+                html5QrCode = null; // Clear the reference
+                if (qrReaderDivForLibrary) {
+                    // Check if the div still has children before clearing,
+                    // or just clear it regardless. Clearing is usually safe.
+                    qrReaderDivForLibrary.innerHTML = "";
+                    console.log("qr-reader div cleared.");
+                }
+            });
+    } else {
+        // If not scanning, ensure cleanup is still attempted/logged
+        if (html5QrCode) { // If instance exists but not scanning
+             console.log("html5QrCode instance exists but is not actively scanning. Clearing reference.");
+             html5QrCode = null;
         }
+        if (qrReaderDivForLibrary && qrReaderDivForLibrary.innerHTML !== "") {
+            qrReaderDivForLibrary.innerHTML = "";
+            console.log("qr-reader div cleared (scanner was not active or instance was null).");
+        }
+    }
+
+    // Update UI elements regardless of scanner state
+    if (scanStatusElement && !scanStatusElement.textContent.startsWith("Error starting scanner")) {
+         scanStatusElement.textContent = 'Scanner stopped.';
+         scanStatusElement.className = 'status-info';
+    }
+    if(startButton) startButton.disabled = false;
+    if(stopButton) stopButton.disabled = true;
+    if(locationSelect) locationSelect.disabled = false;
+    if(scannedByInput) scannedByInput.disabled = false;
+    // html5QrCode = null; // Moved this into the .finally() or the else block
+}
 
         // --- DOMContentLoaded: Initialization and Event Binding ---
         document.addEventListener('DOMContentLoaded', () => {
