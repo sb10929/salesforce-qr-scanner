@@ -87,10 +87,6 @@
             /* The status-info, status-success, status-error classes will handle background/text colors */
         }
 
-        /* Adjusting the existing status classes for the new context if needed,
-           but they should largely work as is. You might want to ensure
-           their colors contrast well with the .salesforce-login-area background. */
-
         .sf-status-message.status-success {
             background-color: #d4edda; /* Lighter green for success */
             color: #155724;
@@ -107,9 +103,8 @@
             border: 1px solid #bee5eb;
         }
 
-        /* Your original button styling in .controls button can remain for other buttons */
         .controls button {
-            background-color: #0070d2; /* This was your original default, keep if desired */
+            background-color: #0070d2; 
             color: white;
             border: none;
             padding: 12px 20px;
@@ -138,7 +133,7 @@
 
         .form-group {
             margin-bottom: 10px;
-            position: relative; /* For positioning vinSearchResultsDiv */
+            position: relative; 
         }
 
         .form-group label {
@@ -224,27 +219,6 @@
             stroke-linejoin: round;
         }
 
-        .controls button {
-            background-color: #0070d2;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin: 10px 5px;
-            transition: background-color 0.3s ease;
-        }
-
-        .controls button:hover {
-            background-color: #005fb3;
-        }
-
-        .controls button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-
         .manual-entry-controls button {
             background-color: #17a2b8;
             color: white;
@@ -265,8 +239,8 @@
             max-height: 150px;
             overflow-y: auto;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            left: 0; /* Align with the left of the form-group */
-            right: 0; /* Align with the right of the form-group */
+            left: 0; 
+            right: 0; 
         }
         .vin-search-results div {
             padding: 8px 10px;
@@ -417,6 +391,7 @@
             <div class="form-group">
                 <label for="location">Location:</label>
                 <select id="location">
+                    <option value="" selected disabled>-- Select a Location --</option>
                     <option value="Hideaway Bay">Hideaway Bay</option>
                     <option value="Pre-Owned">Pre-Owned</option>
                     <option value="Surf Headquarters">Surf Headquarters</option>
@@ -672,13 +647,22 @@
                 updateSalesforceLoginStatus(true, "User info missing. Re-login needed."); 
                 return;
             }
-            if (scannedItems.length === 0) {
-                alert("No items to send.");
+
+            // --- MODIFIED: Location Check ---
+            if (!locationSelect || !locationSelect.value) { 
+                alert("Please select a Location.");
+                if (locationSelect) locationSelect.focus();
                 return;
             }
-            if (!scannedByInput.value.trim()) {
+            // --- END MODIFICATION ---
+
+            if (!scannedByInput || !scannedByInput.value.trim()) {
                 alert("Please ensure 'Scanned By' field (your name) is filled.");
-                scannedByInput.focus();
+                if (scannedByInput) scannedByInput.focus();
+                return;
+            }
+            if (scannedItems.length === 0) {
+                alert("No items to send.");
                 return;
             }
 
@@ -688,7 +672,7 @@
 
             const platformEventsToSend = [];
             const sessionInfoData = {
-                location: locationSelect.value,
+                location: locationSelect.value, // Will now be the selected value
                 scannedByText: scannedByInput.value.trim(), 
                 dateScanned: dateScannedInput.value
             };
@@ -847,7 +831,7 @@
                 fieldsToSelect.push(SF_TYPE_FIELD_API_NAME);
             }
             
-            const sanitizedPartialVin = partialVin.replace(/'/g, "\\'"); // Sanitize once
+            const sanitizedPartialVin = partialVin.replace(/'/g, "\\'"); 
             const soqlQuery = `
                 SELECT ${fieldsToSelect.join(', ')}
                 FROM ${SF_VIN_SEARCH_OBJECT}
@@ -1123,11 +1107,21 @@
 
         function startScanning() {
             if (!scannedByInput || !startButton || !stopButton || !locationSelect || !scanStatusElement || !qrReaderDivForLibrary || !scannerViewportContainer) return;
+            
+            // --- MODIFIED: Add location check before starting scanner ---
+            if (!locationSelect.value) {
+                alert("Please select a Location before starting the scanner.");
+                locationSelect.focus();
+                return;
+            }
+            // --- END MODIFICATION ---
+
             if (!scannedByInput.value.trim()) {
                 alert("Please enter your name in 'Scanned By' field.");
                 scannedByInput.focus();
                 return;
             }
+            
             startButton.disabled = true;
             stopButton.disabled = false;
             if(locationSelect) locationSelect.disabled = true;
@@ -1196,8 +1190,8 @@
             }
             if(startButton) startButton.disabled = false;
             if(stopButton) stopButton.disabled = true;
-            if(locationSelect) locationSelect.disabled = false;
-            if(scannedByInput) scannedByInput.disabled = false;
+            if(locationSelect) locationSelect.disabled = false; // Re-enable location select
+            if(scannedByInput) scannedByInput.disabled = false; // Re-enable scanned by
         }
 
         // --- DOMContentLoaded: Initialization and Event Binding ---
