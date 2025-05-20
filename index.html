@@ -534,19 +534,14 @@
                 salesforceLoginButton.textContent = 'Logout from Salesforce';
                 salesforceLoginButton.onclick = salesforceLogout;
 
-                // --- MODIFIED: Generic login success message ---
                 if (sfConnection && sfConnection.userInfo && sfConnection.userInfo.id) {
-                    // We confirm we have a connection and user ID, but display a generic message
                     salesforceStatusElement.textContent = 'Logged in Successfully.'; 
-                    console.log("User logged in. ID:", sfConnection.userInfo.id); // Keep logging ID for debug if needed
+                    console.log("User logged in. ID:", sfConnection.userInfo.id); 
                 } else {
-                    // This case implies isLoggedIn is true, but sfConnection or userInfo is faulty
                     salesforceStatusElement.textContent = 'Logged in (Connection issue).';
                     console.warn("updateSalesforceLoginStatus: isLoggedIn is true, but sfConnection or userInfo is problematic.", 
                                  sfConnection ? sfConnection.userInfo : "sfConnection is null");
                 }
-                // --- END MODIFICATION ---
-
                 salesforceStatusElement.className = 'sf-status-message status-success';
                 if (sendButton) sendButton.disabled = scannedItems.length === 0;
 
@@ -851,11 +846,12 @@
             if (SF_TYPE_FIELD_API_NAME) {
                 fieldsToSelect.push(SF_TYPE_FIELD_API_NAME);
             }
-
+            
+            const sanitizedPartialVin = partialVin.replace(/'/g, "\\'"); // Sanitize once
             const soqlQuery = `
                 SELECT ${fieldsToSelect.join(', ')}
                 FROM ${SF_VIN_SEARCH_OBJECT}
-                WHERE ${SF_VIN_FIELD_API_NAME} LIKE '${partialVin.replace(/'/g, "\\'")}%'
+                WHERE ${SF_VIN_FIELD_API_NAME} LIKE '%${sanitizedPartialVin}%'
                 ORDER BY ${SF_VIN_FIELD_API_NAME} ASC
                 LIMIT 10
             `;
