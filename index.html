@@ -729,7 +729,7 @@
                 };
                 
                 if (item.manualDetails) { // Primarily for "MANUAL_NEW"
-                    eventPayload.Manual_New_Type__c = item.manualDetails.type; 
+                    eventPayload.Manual_Type__c = item.manualDetails.type; 
                     eventPayload.Manual_Trailer_Type_Spec__c = item.manualDetails.trailerType; 
                     if (item.manualDetails.model) {
                         eventPayload.Manual_Model__c = item.manualDetails.model; 
@@ -746,9 +746,9 @@
                 if (!item.manualDetails?.model && eventPayload.hasOwnProperty('Manual_Model__c')) delete eventPayload.Manual_Model__c;
                 if (!item.manualDetails?.owner && eventPayload.hasOwnProperty('Manual_Trailer_Owner__c')) delete eventPayload.Manual_Trailer_Owner__c;
                 // Ensure required manual details are not deleted if they were set (they should exist if scanType is MANUAL_NEW)
-                if (item.scanType === "MANUAL_NEW" && !item.manualDetails?.type && eventPayload.hasOwnProperty('Manual_New_Type__c')) {
+                if (item.scanType === "MANUAL_NEW" && !item.manualDetails?.type && eventPayload.hasOwnProperty('Manual_Type__c')) {
                      // This case shouldn't happen if validation in handleAddManualEntry is correct, but as a safeguard:
-                     console.warn("MANUAL_NEW item missing Manual_New_Type__c in payload prep. Item:", item);
+                     console.warn("MANUAL_NEW item missing Manual_Type__c in payload prep. Item:", item);
                 }
                 if (item.scanType === "MANUAL_NEW" && !item.manualDetails?.trailerType && eventPayload.hasOwnProperty('Manual_Trailer_Type_Spec__c')) {
                      console.warn("MANUAL_NEW item missing Manual_Trailer_Type_Spec__c in payload prep. Item:", item);
