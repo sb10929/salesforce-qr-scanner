@@ -4,61 +4,392 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Salesforce QR Scanner</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
-    <!-- JSForce library MUST be before your script -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsforce/1.11.1/jsforce.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
-        /* For library-injected elements that are hard to style with Tailwind alone */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #0070d2;
+            margin-bottom: 20px;
+        }
+
+        .session-inputs {
+            background-color: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .salesforce-login-area {
+            background-color: #f0f8ff; /* Light blue background */
+            border: 1px solid #b8daff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px; /* Space below this section */
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 112, 210, 0.15); /* Subtle shadow */
+        }
+
+        .sf-login-button {
+            background-color: #0070d2; /* Salesforce Blue */
+            color: white;
+            border: none;
+            padding: 15px 30px; /* Larger padding */
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1em; /* Larger font */
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            display: inline-block; 
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .sf-login-button:hover {
+            background-color: #005fb3; 
+            transform: translateY(-2px); 
+        }
+
+        .sf-login-button:active {
+            background-color: #004a8c;
+            transform: translateY(0px); 
+        }
+
+        .sf-status-message {
+            margin-top: 15px;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-weight: 500; 
+            font-size: 0.95em;
+        }
+
+        .sf-status-message.status-success {
+            background-color: #d4edda; 
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .sf-status-message.status-error {
+            background-color: #f8d7da; 
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .sf-status-message.status-info {
+            background-color: #d1ecf1; 
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .controls button {
+            background-color: #0070d2; 
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        .controls button:hover {
+            background-color: #005fb3;
+        }
+
+        .controls button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .session-inputs h2 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+            position: relative; 
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .form-group input[type="text"],
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 0.9em;
+        }
+        .form-group input[readonly] {
+            background-color: #e9ecef;
+        }
+
+        .scanner-viewport-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin: 20px auto;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #qr-reader {
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #333;
+        }
+        
         #qr-reader__dashboard_section_csr span button {
-            background-color: #2563eb !important; /* Tailwind blue-600 */
+            background-color: #0070d2 !important;
             color: white !important;
             border: none !important;
             padding: 8px 15px !important;
-            border-radius: 0.25rem !important; /* Tailwind rounded-md */
+            border-radius: 4px !important;
             cursor: pointer !important;
-            font-weight: 500 !important;
         }
         #qr-reader__dashboard_section_csr span button:hover {
-            background-color: #1d4ed8 !important; /* Tailwind blue-700 */
+            background-color: #005fb3 !important;
         }
-        /* Custom scrollbar for scanned items list */
-        #scanned-items-list::-webkit-scrollbar {
-            width: 8px;
+
+        #scan-success-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(40, 167, 69, 0.85);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
         }
-        #scanned-items-list::-webkit-scrollbar-track {
-            background: #f1f5f9; /* slate-100 */
-            border-radius: 10px;
+
+        #scan-success-overlay.visible {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.05);
         }
-        #scanned-items-list::-webkit-scrollbar-thumb {
-            background: #94a3b8; /* slate-400 */
-            border-radius: 10px;
+        
+        #scan-success-overlay svg {
+            width: 30px;
+            height: 30px;
+            margin-right: 10px;
+            stroke: white;
+            stroke-width: 5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
-        #scanned-items-list::-webkit-scrollbar-thumb:hover {
-            background: #64748b; /* slate-500 */
+
+        .manual-entry-controls button {
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+
+        .vin-search-results {
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ccc;
+            border-top: none;
+            z-index: 1000; 
+            width: calc(100% - 2px); 
+            max-height: 150px;
+            overflow-y: auto;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            left: 0; 
+            right: 0; 
+        }
+        .vin-search-results div {
+            padding: 8px 10px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .vin-search-results div:hover {
+            background-color: #f0f0f0;
+        }
+        .vin-search-results div.no-results {
+            cursor: default;
+            color: #777;
+        }
+        .manual-entry-controls button:hover {
+            background-color: #138496;
+        }
+
+        #manualEntryFormContainer h3 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        #manualEntryFormContainer .controls-button {
+            padding: 10px 15px;
+            font-size: 0.9em;
+            border-radius: 4px;
+            cursor: pointer;
+            border:none;
+            color: white;
+        }
+        #addManualEntryButton {
+            background-color: #0070d2;
+        }
+        #addManualEntryButton:hover {
+            background-color: #005fb3;
+        }
+        #cancelManualEntryButton {
+            background-color: #6c757d;
+        }
+        #cancelManualEntryButton:hover {
+            background-color: #5a6268;
+        }
+
+        #scan-status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .status-success {
+            background-color: #e6ffed;
+            color: #28a745;
+            border: 1px solid #c3e6cb;
+        }
+        .status-error {
+            background-color: #ffebee;
+            color: #dc3545;
+            border: 1px solid #f5c6cb;
+        }
+        .status-info {
+            background-color: #e7f3fe;
+            color: #007bff;
+            border: 1px solid #b8daff;
+        }
+
+        #scanned-items-container {
+            margin-top: 20px;
+            text-align: left;
+        }
+        #scanned-items-container h2 {
+            font-size: 18px;
+            color: #555;
+            margin-bottom: 10px;
+        }
+        #scanned-items-list {
+            list-style-type: none;
+            padding: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            padding: 10px;
+        }
+        #scanned-items-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+            word-break: break-all;
+            font-size: 14px;
+        }
+        #scanned-items-list li:last-child {
+            border-bottom: none;
+        }
+        .item-geo {
+            font-size: 0.8em;
+            color: #777;
+            margin-left: 10px;
+        }
+        .instructions {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 20px;
+            background-color: #e7f3fe;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #0070d2;
+        }
+         .instructions button {
+            padding: 3px 8px;
+            font-size: 0.9em;
+            margin-left: 5px;
+            cursor: pointer;
+            background-color: #0070d2;
+            color: white;
+            border: none;
+            border-radius: 3px;
+        }
+        .instructions button:hover{
+            background-color: #005fb3;
+        }
+        .instructions button:disabled{
+            background-color: #ccc;
+            cursor: not-allowed;
         }
     </style>
+    <!-- JSForce library MUST be before your script -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsforce/1.11.1/jsforce.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans flex flex-col items-center min-h-screen p-4 md:p-6 box-border">
+<body>
+    <div class="container">
+        <h1>Salesforce QR Scanner</h1>
 
-    <div class="bg-white p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-xl text-center">
-        <h1 class="text-3xl font-bold text-blue-600 mb-6">Salesforce QR Scanner</h1>
-
-        <div id="salesforce-login-section" class="bg-blue-50 border border-blue-200 rounded-lg p-5 mb-6 text-center shadow-md">
-            <button id="salesforceLoginButton" class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold uppercase tracking-wider py-3 px-8 rounded-md shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0 text-base">
-                Login to Salesforce
-            </button>
-            <div id="salesforceStatus" class="sf-status-message mt-4 p-3 rounded-md font-medium text-sm">
+        <div id="salesforce-login-section" class="salesforce-login-area">
+            <button id="salesforceLoginButton" class="sf-login-button">Login to Salesforce</button>
+            <div id="salesforceStatus" class="sf-status-message status-info">
                 Not logged into Salesforce. Please login to send data.
             </div>
         </div>
 
-        <div class="bg-slate-50 border border-slate-200 rounded-lg p-5 mb-6 text-left shadow">
-            <h2 class="text-xl font-semibold text-slate-700 mb-4">Session Information</h2>
-            <div class="form-group mb-4 relative">
-                <label for="location" class="block mb-1.5 font-semibold text-sm text-slate-700">Location:</label>
-                <select id="location" class="w-full p-2.5 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none shadow-sm">
+        <div class="session-inputs">
+            <h2>Session Information</h2>
+            <div class="form-group">
+                <label for="location">Location:</label>
+                <select id="location">
                     <option value="" selected disabled>-- Select a Location --</option>
                     <option value="Hideaway Bay">Hideaway Bay</option>
                     <option value="Pre-Owned">Pre-Owned</option>
@@ -66,39 +397,37 @@
                     <option value="Bennington Showroom">Bennington Showroom</option>
                 </select>
             </div>
-            <div class="form-group mb-4 relative">
-                <label for="scannedBy" class="block mb-1.5 font-semibold text-sm text-slate-700">Scanned By:</label>
-                <input type="text" id="scannedBy" placeholder="Enter your name" class="w-full p-2.5 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none shadow-sm">
+            <div class="form-group">
+                <label for="scannedBy">Scanned By:</label>
+                <input type="text" id="scannedBy" placeholder="Enter your name">
             </div>
-            <div class="form-group relative">
-                <label for="dateScanned" class="block mb-1.5 font-semibold text-sm text-slate-700">Date Scanned:</label>
-                <input type="text" id="dateScanned" readonly class="w-full p-2.5 border border-slate-300 rounded-md text-sm bg-slate-100 cursor-not-allowed shadow-sm">
+            <div class="form-group">
+                <label for="dateScanned">Date Scanned:</label>
+                <input type="text" id="dateScanned" readonly>
             </div>
         </div>
 
-        <div class="mb-6">
-            <button id="toggleManualEntryButton" class="bg-sky-600 hover:bg-sky-700 text-white font-medium py-2.5 px-5 rounded-md shadow transition-colors text-sm">Manual Entry</button>
+        <div class="manual-entry-controls" style="margin-bottom: 20px;">
+            <button id="toggleManualEntryButton">Manual Entry</button>
         </div>
 
-        <div id="manualEntryFormContainer" style="display: none;" class="bg-sky-50 border border-sky-200 p-5 rounded-lg mb-6 text-left shadow">
-            <h3 class="text-lg font-semibold text-slate-700 mb-4">Manual Trailer Entry</h3>
-            <div class="form-group mb-3 relative">
-                <label for="manualMake" class="block mb-1 font-semibold text-xs text-slate-600">Make:</label>
-                <input type="text" id="manualMake" placeholder="Enter trailer make (Required)" class="w-full p-2 border border-slate-300 rounded-md text-sm shadow-sm">
+        <div id="manualEntryFormContainer" style="display: none; background-color: #f0f8ff; padding: 15px; border-radius: 5px; margin-bottom: 20px; text-align: left;">
+            <h3>Manual Trailer Entry</h3>
+            <div class="form-group">
+                <label for="manualMake">Make:</label>
+                <input type="text" id="manualMake" placeholder="Enter trailer make (Required)">
             </div>
-            <div class="form-group mb-3 relative">
-                <label for="manualVin" class="block mb-1 font-semibold text-xs text-slate-600">VIN:</label>
-                <input type="text" id="manualVin" placeholder="Enter trailer VIN (Required)" class="w-full p-2 border border-slate-300 rounded-md text-sm shadow-sm">
-                <small id="vinSearchHelp" class="block text-xs text-slate-500 mt-1">
-                    Type at least 4 characters to search.
+            <div class="form-group">
+                <label for="manualVin">VIN:</label>
+                <input type="text" id="manualVin" placeholder="Enter trailer VIN (Required)">
+                <small id="vinSearchHelp" style="display: block; font-size: 0.8em; color: #555; margin-top: 3px;">
+                    Type at least 4 characters to search. If found & selected, some fields below may not be required.
                 </small>
-                <div id="vinSearchResults" class="absolute bg-white border border-slate-300 border-t-0 z-50 w-[calc(100%-2px)] max-h-36 overflow-y-auto shadow-lg rounded-b-md left-0 right-0" style="display:none;">
-                    {/* Results will be populated here */}
-                </div>
+                <div id="vinSearchResults" class="vin-search-results" style="display:none;"></div>
             </div>
-            <div class="form-group mb-3">
-                <label for="manualNewType" class="block mb-1 font-semibold text-xs text-slate-600">Type (Required if not found in SF):</label>
-                <select id="manualNewType" class="w-full p-2 border border-slate-300 rounded-md text-sm shadow-sm">
+            <div class="form-group">
+                <label for="manualNewType">Type (Required if not found in SF):</label>
+                <select id="manualNewType">
                     <option value="">-- Select Type --</option>
                     <option value="New - In Stock">New - In Stock</option>
                     <option value="New - On Order">New - On Order</option>
@@ -107,9 +436,9 @@
                     <option value="Used">Used</option>
                 </select>
             </div>
-            <div class="form-group mb-3">
-                <label for="manualTrailerType" class="block mb-1 font-semibold text-xs text-slate-600">Trailer Type (Required if not found in SF):</label>
-                <select id="manualTrailerType" class="w-full p-2 border border-slate-300 rounded-md text-sm shadow-sm">
+            <div class="form-group">
+                <label for="manualTrailerType">Trailer Type (Required if not found in SF):</label>
+                <select id="manualTrailerType">
                     <option value="">-- Select Trailer Type --</option>
                     <option value="Pontoon">Pontoon</option>
                     <option value="Inboard">Inboard</option>
@@ -119,26 +448,24 @@
                     <option value="Other">Other</option>
                 </select>
             </div>
-            <div class="form-group mb-3">
-                <label for="manualModel" class="block mb-1 font-semibold text-xs text-slate-600">Model:</label>
-                <input type="text" id="manualModel" placeholder="Enter trailer model (Optional)" class="w-full p-2 border border-slate-300 rounded-md text-sm shadow-sm">
+            <div class="form-group">
+                <label for="manualModel">Model:</label>
+                <input type="text" id="manualModel" placeholder="Enter trailer model (Optional)">
             </div>
-            <div class="form-group mb-4">
-                <label for="manualTrailerOwner" class="block mb-1 font-semibold text-xs text-slate-600">Trailer Owner:</label>
-                <input type="text" id="manualTrailerOwner" placeholder="Enter trailer owner (Optional)" class="w-full p-2 border border-slate-300 rounded-md text-sm shadow-sm">
+            <div class="form-group">
+                <label for="manualTrailerOwner">Trailer Owner:</label>
+                <input type="text" id="manualTrailerOwner" placeholder="Enter trailer owner (Optional)">
             </div>
-            <div class="flex gap-2">
-                <button id="addManualEntryButton" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md text-sm shadow transition-colors">Add to List</button>
-                <button id="cancelManualEntryButton" class="flex-1 bg-slate-500 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-md text-sm shadow transition-colors">Cancel</button>
-            </div>
-            <div id="manualEntryStatus" class="mt-3 font-semibold text-sm"></div>
+            <button id="addManualEntryButton" class="controls-button" style="margin-right: 10px;">Add to List</button>
+            <button id="cancelManualEntryButton" class="controls-button" style="background-color: #6c757d;">Cancel</button>
+            <div id="manualEntryStatus" style="margin-top: 10px; font-weight: bold;"></div>
         </div>
-        
-        <div class="text-sm text-slate-700 mb-6 bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500 shadow text-left">
-            <p class="font-bold mb-2 text-slate-800">Instructions:</p>
-            <ol class="list-decimal list-inside space-y-1.5">
+
+        <div class="instructions">
+            <p><strong>Instructions:</strong></p>
+            <ol>
                 <li>Fill in Session Information above.</li>
-                <li><button id="checkLocationButton" class="py-1 px-2.5 text-xs ml-1 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white border-none rounded-md shadow transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed">Check/Enable Location</button> (Recommended)</li>
+                <li><button id="checkLocationButton">Check/Enable Location</button> (Recommended)</li>
                 <li>Click "Start Scanning" to activate the camera.</li>
                 <li>Allow camera and location permissions if prompted.</li>
                 <li>Point your camera at a QR code. Geolocation will be captured.</li>
@@ -148,29 +475,27 @@
             </ol>
         </div>
 
-        <div class="relative w-full max-w-xs mx-auto my-5 rounded-lg overflow-hidden shadow-lg">
-            <div id="qr-reader" class="w-full border-2 border-slate-300 rounded-lg bg-slate-900 aspect-square"></div>
-            <div id="scan-success-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-green-600/90 text-white p-4 rounded-lg z-50 opacity-0 transition-all duration-300 pointer-events-none transform scale-90">
-                <svg class="w-12 h-12 mb-2" viewBox="0 0 50 50" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+        <div class="scanner-viewport-container">
+            <div id="qr-reader"></div>
+            <div id="scan-success-overlay">
+                <svg viewBox="0 0 50 50">
+                    <path fill="transparent" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
                 </svg>
-                <span class="font-bold text-lg">Scan Successful!</span>
+                <span>Scan Successful!</span>
             </div>
         </div>
 
-        <div id="scan-status" class="scan-status-base mt-5 p-3.5 rounded-lg font-semibold min-h-[52px] flex items-center justify-center text-center shadow">Initializing...</div>
+        <div id="scan-status" class="status-info">Initializing...</div>
 
-        <div class="mt-6 space-x-2">
-            <button id="startButton" class="bg-green-500 hover:bg-green-600 text-white font-medium py-2.5 px-5 rounded-md shadow transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed">Start Scanning</button>
-            <button id="stopButton" disabled class="bg-red-500 hover:bg-red-600 text-white font-medium py-2.5 px-5 rounded-md shadow transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed">Stop Scanning</button>
-            <button id="sendButton" disabled class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-5 rounded-md shadow transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed">Send to Salesforce</button>
+        <div class="controls">
+            <button id="startButton">Start Scanning</button>
+            <button id="stopButton" disabled>Stop Scanning</button>
+            <button id="sendButton" disabled>Send to Salesforce</button>
         </div>
 
-        <div id="scanned-items-container" class="mt-8 text-left w-full">
-            <h2 class="text-lg font-semibold text-slate-700 mb-2.5">Scanned Items:</h2>
-            <ul id="scanned-items-list" class="list-none p-0 max-h-52 overflow-y-auto border border-slate-200 rounded-lg bg-white shadow">
-                {/* Scanned items will be populated here */}
-            </ul>
+        <div id="scanned-items-container">
+            <h2>Scanned Items:</h2>
+            <ul id="scanned-items-list"></ul>
         </div>
     </div>
 
@@ -202,34 +527,6 @@
             manualNewTypeSelect, manualTrailerTypeSelect, manualModelInput, manualTrailerOwnerInput;
         let vinSearchResultsDiv, vinSearchHelpText;
 
-        // --- Status Class Helper ---
-        function setStatusClasses(element, type, baseClasses = []) {
-            const typeClassMap = {
-                success: ['bg-green-100', 'text-green-700', 'border', 'border-green-200'],
-                error: ['bg-red-100', 'text-red-700', 'border', 'border-red-200'],
-                info: ['bg-blue-100', 'text-blue-700', 'border', 'border-blue-200']
-            };
-
-            // Define all possible type-specific classes to ensure they are removed before adding new ones
-            const allTypeSpecificClasses = [
-                ...typeClassMap.success,
-                ...typeClassMap.error,
-                ...typeClassMap.info
-            ].filter((value, index, self) => self.indexOf(value) === index); // Unique
-
-            element.classList.remove(...allTypeSpecificClasses);
-            
-            // Add new base classes (if any specified, otherwise assumes base classes are in HTML)
-            if (baseClasses.length > 0) {
-                element.classList.add(...baseClasses);
-            }
-            
-            // Add the type-specific classes
-            if (typeClassMap[type]) {
-                element.classList.add(...typeClassMap[type]);
-            }
-        }
-
 
         // --- Salesforce Authentication & Utility Functions ---
         function updateSalesforceLoginStatus(isLoggedIn, message) {
@@ -237,8 +534,6 @@
                 console.error("updateSalesforceLoginStatus: Salesforce UI elements not found.");
                 return;
             }
-            // Base classes for salesforceStatusElement are already in HTML:
-            // "sf-status-message mt-4 p-3 rounded-md font-medium text-sm"
 
             if (isLoggedIn) {
                 salesforceLoginButton.textContent = 'Logout from Salesforce';
@@ -252,7 +547,7 @@
                     console.warn("updateSalesforceLoginStatus: isLoggedIn is true, but sfConnection or userInfo is problematic.", 
                                  sfConnection ? sfConnection.userInfo : "sfConnection is null");
                 }
-                setStatusClasses(salesforceStatusElement, 'success');
+                salesforceStatusElement.className = 'sf-status-message status-success';
                 if (sendButton) sendButton.disabled = scannedItems.length === 0;
 
             } else { 
@@ -260,9 +555,9 @@
                 salesforceLoginButton.onclick = salesforceLogin;
                 salesforceStatusElement.textContent = message || 'Not logged into Salesforce. Please login to send data.';
                 if (message && (message.toLowerCase().includes('fail') || message.toLowerCase().includes('error'))) {
-                    setStatusClasses(salesforceStatusElement, 'error');
+                    salesforceStatusElement.className = 'sf-status-message status-error';
                 } else {
-                    setStatusClasses(salesforceStatusElement, 'info');
+                    salesforceStatusElement.className = 'sf-status-message status-info';
                 }
                 if (sendButton) sendButton.disabled = true;
             }
@@ -277,10 +572,7 @@
             }
             if (typeof jsforce === 'undefined') {
                 console.error("jsforce library is not loaded!");
-                if(salesforceStatusElement) {
-                    salesforceStatusElement.textContent = "Error: jsforce library not found.";
-                    setStatusClasses(salesforceStatusElement, 'error');
-                }
+                if(salesforceStatusElement) salesforceStatusElement.textContent = "Error: jsforce library not found.";
                 return;
             }
             jsforce.browser.init({
@@ -401,7 +693,7 @@
             }
 
             scanStatusElement.textContent = 'Preparing data for Salesforce...';
-            setStatusClasses(scanStatusElement, 'info');
+            scanStatusElement.className = 'status-info';
             sendButton.disabled = true;
 
             const platformEventsToSend = [];
@@ -430,13 +722,13 @@
                     Longitude__c: item.longitude,
                     Accuracy__c: item.accuracy,
                     Geolocation_Timestamp__c: item.timestamp ? new Date(item.timestamp).toISOString() : null,
-                    Scan_Type__c: item.scanType,
+                    Scan_Type__c: item.scanType, // Use the stored scan type
                     Manual_Make__c: manualMake, 
                     Manual_VIN__c: manualVin,
                     Linked_Trailer_ID__c: item.salesforceId || null 
                 };
                 
-                if (item.manualDetails) { 
+                if (item.manualDetails) { // Primarily for "MANUAL_NEW"
                     eventPayload.Manual_Type__c = item.manualDetails.type; 
                     eventPayload.Manual_Trailer_Type_Spec__c = item.manualDetails.trailerType; 
                     if (item.manualDetails.model) {
@@ -453,18 +745,22 @@
                 if (manualVin === null && eventPayload.hasOwnProperty('Manual_VIN__c')) delete eventPayload.Manual_VIN__c;
                 if (!item.manualDetails?.model && eventPayload.hasOwnProperty('Manual_Model__c')) delete eventPayload.Manual_Model__c;
                 if (!item.manualDetails?.owner && eventPayload.hasOwnProperty('Manual_Trailer_Owner__c')) delete eventPayload.Manual_Trailer_Owner__c;
+                // Ensure required manual details are not deleted if they were set (they should exist if scanType is MANUAL_NEW)
                 if (item.scanType === "MANUAL_NEW" && !item.manualDetails?.type && eventPayload.hasOwnProperty('Manual_Type__c')) {
+                     // This case shouldn't happen if validation in handleAddManualEntry is correct, but as a safeguard:
                      console.warn("MANUAL_NEW item missing Manual_Type__c in payload prep. Item:", item);
                 }
                 if (item.scanType === "MANUAL_NEW" && !item.manualDetails?.trailerType && eventPayload.hasOwnProperty('Manual_Trailer_Type_Spec__c')) {
                      console.warn("MANUAL_NEW item missing Manual_Trailer_Type_Spec__c in payload prep. Item:", item);
                 }
+
+
                 platformEventsToSend.push(eventPayload);
             }
 
             if (platformEventsToSend.length === 0) {
                 scanStatusElement.textContent = 'No valid items to send.';
-                setStatusClasses(scanStatusElement, 'info');
+                scanStatusElement.className = 'status-info';
                 if(sendButton) sendButton.disabled = scannedItems.length > 0 ? false : true;
                 return;
             }
@@ -494,18 +790,18 @@
 
                 if (successCount === platformEventsToSend.length) {
                     scanStatusElement.textContent = `Successfully sent ${successCount} items to Salesforce!`;
-                    setStatusClasses(scanStatusElement, 'success');
+                    scanStatusElement.className = 'status-success';
                     scannedItems.length = 0; 
                     updateScannedList(); 
                 } else {
                     scanStatusElement.textContent = `Sent ${successCount}/${platformEventsToSend.length}. Errors: ${errorMessages.join(' | ')}`;
-                    setStatusClasses(scanStatusElement, 'error');
+                    scanStatusElement.className = 'status-error';
                 }
 
             } catch (err) {
                 console.error("Error publishing Platform Events:", err);
                 scanStatusElement.textContent = `Error sending to SF: ${err.message || JSON.stringify(err)}`;
-                setStatusClasses(scanStatusElement, 'error');
+                scanStatusElement.className = 'status-error';
             } finally {
                 if(sendButton) sendButton.disabled = scannedItems.length === 0 || !sfConnection;
             }
@@ -524,14 +820,13 @@
             clearVinSearchResults(); 
 
             if (!results || results.length === 0) {
-                vinSearchResultsDiv.innerHTML = '<div class="p-2.5 cursor-default text-slate-500 text-sm">No matching VINs found.</div>';
+                vinSearchResultsDiv.innerHTML = '<div class="no-results">No matching VINs found.</div>';
                 vinSearchResultsDiv.style.display = 'block';
                 return;
             }
 
             results.forEach(record => {
                 const itemDiv = document.createElement('div');
-                itemDiv.className = 'p-2.5 cursor-pointer text-sm hover:bg-slate-100';
                 const vin = record[SF_VIN_FIELD_API_NAME] || 'N/A VIN';
                 const make = record[SF_MAKE_FIELD_API_NAME] || 'N/A Make';
                 const type = record[SF_TYPE_FIELD_API_NAME] || 'N/A Type';
@@ -562,7 +857,7 @@
             if (!sfConnection || !sfConnection.accessToken) {
                 console.log("Not logged into Salesforce. VIN search unavailable.");
                 if (vinSearchResultsDiv) {
-                    vinSearchResultsDiv.innerHTML = '<div class="p-2.5 cursor-default text-slate-500 text-sm">Login to Salesforce to search VINs.</div>';
+                    vinSearchResultsDiv.innerHTML = '<div class="no-results">Login to Salesforce to search VINs.</div>';
                     vinSearchResultsDiv.style.display = 'block';
                 }
                 return;
@@ -574,7 +869,7 @@
             }
 
             if (vinSearchResultsDiv) {
-                vinSearchResultsDiv.innerHTML = '<div class="p-2.5 cursor-default text-slate-500 text-sm">Searching...</div>';
+                vinSearchResultsDiv.innerHTML = '<div class="no-results">Searching...</div>';
                 vinSearchResultsDiv.style.display = 'block';
             }
 
@@ -607,7 +902,7 @@
             } catch (err) {
                 console.error('Salesforce VIN search error:', err);
                 if (vinSearchResultsDiv) {
-                    vinSearchResultsDiv.innerHTML = `<div class="p-2.5 cursor-default text-red-500 text-sm">Error searching: ${err.message}</div>`;
+                    vinSearchResultsDiv.innerHTML = `<div class="no-results">Error searching: ${err.message}</div>`;
                     vinSearchResultsDiv.style.display = 'block';
                 }
             }
@@ -632,22 +927,21 @@
             scannedItemsListElement.innerHTML = '';
             scannedItems.forEach(item => {
                 const listItem = document.createElement('li');
-                listItem.className = 'py-2.5 px-3 border-b border-slate-100 break-all text-sm last:border-b-0 flex justify-between items-center';
-                
-                let displayText = `<span class="truncate max-w-[70%]">${item.text}</span>`;
-                if (item.scanType === "MANUAL") { 
-                     displayText += ` <strong class="text-green-600 text-xs ml-1 whitespace-nowrap">(SF Linked)</strong>`;
-                } else if (item.scanType === "MANUAL_NEW") { 
-                    displayText += ` <em class="text-sky-600 text-xs ml-1 whitespace-nowrap">(New Manual)</em>`;
+                let displayText = item.text;
+                if (item.scanType === "MANUAL") { // Linked to existing SF record
+                     displayText += ` <strong style="color: #28a745;">(SF Linked: ${item.salesforceId.substring(0, 6)}...)</strong>`;
+                } else if (item.scanType === "MANUAL_NEW") { // New manual entry
+                    displayText += ` <em style="color: #17a2b8;">(New Manual: ${item.manualDetails.type}, ${item.manualDetails.trailerType})</em>`;
                 }
+                // For QR, no specific trailer type indicator here unless you add it to item.text
 
                 let geoInfo = '';
                 if (item.geoError) {
-                    geoInfo = `<span class="text-xs text-orange-500 ml-2 whitespace-nowrap">(Geo: Err)</span>`;
+                    geoInfo = `<span class="item-geo">(Geo: ${item.geoError})</span>`;
                 } else if (item.latitude !== null && item.longitude !== null) {
-                    geoInfo = `<span class="text-xs text-slate-500 ml-2 whitespace-nowrap">(Loc OK)</span>`;
+                    geoInfo = `<span class="item-geo">(Lat: ${item.latitude.toFixed(5)}, Lon: ${item.longitude.toFixed(5)}, Acc: ${item.accuracy}m)</span>`;
                 }
-                listItem.innerHTML = `<div>${displayText}</div> ${geoInfo}`;
+                listItem.innerHTML = `${displayText} ${geoInfo}`;
                 scannedItemsListElement.appendChild(listItem);
             });
             if (sendButton) sendButton.disabled = scannedItems.length === 0 || !sfConnection;
@@ -674,18 +968,17 @@
 
         function updateCheckLocationButtonText(state) {
             if (!checkLocationButton) return;
-            checkLocationButton.classList.remove('bg-green-500', 'hover:bg-green-600', 'bg-red-500', 'hover:bg-red-600', 'bg-blue-600', 'hover:bg-blue-700');
             if (state === 'granted') {
                 checkLocationButton.textContent = 'Location Enabled';
-                checkLocationButton.classList.add('bg-green-500', 'hover:bg-green-600');
+                checkLocationButton.style.backgroundColor = '#28a745';
                 checkLocationButton.disabled = true;
             } else if (state === 'denied') {
                 checkLocationButton.textContent = 'Location Denied';
-                checkLocationButton.classList.add('bg-red-500', 'hover:bg-red-600');
+                checkLocationButton.style.backgroundColor = '#dc3545';
                 checkLocationButton.disabled = false; 
             } else { 
                 checkLocationButton.textContent = 'Enable Location';
-                checkLocationButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                checkLocationButton.style.backgroundColor = ''; 
                 checkLocationButton.disabled = false;
             }
         }
@@ -696,7 +989,7 @@
                     const errorMsg = 'Geolocation is not supported.';
                     if (isExplicitRequest && scanStatusElement) {
                         scanStatusElement.textContent = errorMsg;
-                        setStatusClasses(scanStatusElement, 'error');
+                        scanStatusElement.className = 'status-error';
                     }
                     if (checkLocationButton) updateCheckLocationButtonText('denied'); 
                     reject(new Error(errorMsg));
@@ -706,11 +999,11 @@
                     (position) => {
                         if (isExplicitRequest && scanStatusElement) {
                             scanStatusElement.textContent = 'Location access granted!';
-                            setStatusClasses(scanStatusElement, 'success');
+                            scanStatusElement.className = 'status-success';
                             setTimeout(() => {
                                 if (scanStatusElement && scanStatusElement.textContent === 'Location access granted!') { 
                                     scanStatusElement.textContent = 'Ready to scan.';
-                                    setStatusClasses(scanStatusElement, 'info');
+                                    scanStatusElement.className = 'status-info';
                                 }
                             }, 2000);
                         }
@@ -736,7 +1029,7 @@
                         }
                         if (isExplicitRequest && scanStatusElement) {
                             scanStatusElement.textContent = errorMessage;
-                            setStatusClasses(scanStatusElement, 'error');
+                            scanStatusElement.className = 'status-error';
                         }
                          if (checkLocationButton && typeof navigator.permissions?.query === 'function') {
                              navigator.permissions.query({name:'geolocation'}).then(ps => updateCheckLocationButtonText(ps.state));
@@ -757,20 +1050,17 @@
         async function onScanSuccess(decodedText, decodedResult) {
             if (!scanStatusElement || !scanSuccessOverlay) return;
             const trimmedDecodedText = decodedText.trim();
-            if (scannedItems.some(item => item.text === trimmedDecodedText && item.scanType === "QR")) {
+            if (scannedItems.some(item => item.text === trimmedDecodedText && item.scanType === "QR")) { // Ensure QR duplicates are checked
                 if(scanStatusElement) {
                     scanStatusElement.textContent = `"${trimmedDecodedText.substring(0,20)}..." already scanned.`;
-                    setStatusClasses(scanStatusElement, 'info');
+                    scanStatusElement.className = 'status-info';
                 }
                 return;
             }
-            if(scanSuccessOverlay) {
-                 scanSuccessOverlay.classList.remove('opacity-0', 'scale-90');
-                 scanSuccessOverlay.classList.add('opacity-100', 'scale-100');
-            }
+            if(scanSuccessOverlay) scanSuccessOverlay.classList.add('visible');
             if(scanStatusElement) {
                 scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Getting location...`;
-                setStatusClasses(scanStatusElement, 'info');
+                scanStatusElement.className = 'status-info';
             }
 
             let geoData = { latitude: null, longitude: null, accuracy: null, geoError: null, timestamp: new Date().toISOString() };
@@ -779,30 +1069,25 @@
                 geoData = {...geoData, ...location}; 
                 if(scanStatusElement) {
                     scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Location captured!`;
-                    setStatusClasses(scanStatusElement, 'success');
+                    scanStatusElement.className = 'status-success';
                 }
             } catch (error) {
                 geoData.geoError = error.message;
                 if(scanStatusElement) {
                     scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Geo Error: ${error.message}`;
-                    setStatusClasses(scanStatusElement, 'error');
+                    scanStatusElement.className = 'status-error'; 
                 }
             }
             scannedItems.push({ 
                 text: trimmedDecodedText, 
                 salesforceId: null, 
                 manualDetails: null, 
-                scanType: "QR", 
+                scanType: "QR", // Explicitly set scan type for QR
                 ...geoData 
             }); 
             updateScannedList();
             if (navigator.vibrate) navigator.vibrate(100);
-            if(scanSuccessOverlay) {
-                setTimeout(() => {
-                    scanSuccessOverlay.classList.remove('opacity-100', 'scale-100');
-                    scanSuccessOverlay.classList.add('opacity-0', 'scale-90');
-                }, 1200);
-            }
+            if(scanSuccessOverlay) setTimeout(() => scanSuccessOverlay.classList.remove('visible'), 1200);
         }
 
         function onScanFailure(error) { /* console.warn(`QR error = ${error}`); */ }
@@ -825,7 +1110,6 @@
                         stopScanning();
                         if (scanStatusElement) { 
                            scanStatusElement.textContent = "Scanner stopped for manual entry.";
-                           setStatusClasses(scanStatusElement, 'info');
                         }
                     }
                 } else {
@@ -844,7 +1128,7 @@
             
             if (!make || !vin) {
                 manualEntryStatus.textContent = "Make and VIN are required.";
-                manualEntryStatus.className = "mt-3 font-semibold text-sm text-red-600";
+                manualEntryStatus.style.color = 'red';
                 if (!make) manualMakeInput.focus(); else manualVinInput.focus();
                 return;
             }
@@ -852,9 +1136,9 @@
             const currentSalesforceId = selectedSalesforceTrailerId; 
             let manualEntryText = `MANUAL: ${make} - VIN: ${vin}`;
             let manualDetailsPayload = null;
-            let itemScanType = "MANUAL"; 
+            let itemScanType = "MANUAL"; // Default for linked entries
 
-            if (currentSalesforceId === null) { 
+            if (currentSalesforceId === null) { // This is a new trailer not found/selected from SF
                 itemScanType = "MANUAL_NEW";
                 const newType = manualNewTypeSelect.value;
                 const trailerType = manualTrailerTypeSelect.value;
@@ -863,13 +1147,13 @@
 
                 if (!newType) {
                     manualEntryStatus.textContent = "Type is required for new trailer entries not found in Salesforce.";
-                    manualEntryStatus.className = "mt-3 font-semibold text-sm text-red-600";
+                    manualEntryStatus.style.color = 'red';
                     manualNewTypeSelect.focus();
                     return;
                 }
                 if (!trailerType) {
                     manualEntryStatus.textContent = "Trailer Type is required for new trailer entries not found in Salesforce.";
-                    manualEntryStatus.className = "mt-3 font-semibold text-sm text-red-600";
+                    manualEntryStatus.style.color = 'red';
                     manualTrailerTypeSelect.focus();
                     return;
                 }
@@ -881,32 +1165,33 @@
                 };
             }
             
+            // Check for duplicates based on text and the determined scan type
             if (scannedItems.some(item => item.text.toUpperCase() === manualEntryText.toUpperCase() && item.scanType === itemScanType && item.salesforceId === currentSalesforceId )) {
-                manualEntryStatus.textContent = "This exact entry already exists.";
-                manualEntryStatus.className = "mt-3 font-semibold text-sm text-orange-500";
+                manualEntryStatus.textContent = "This exact entry (including link status and type) already exists.";
+                manualEntryStatus.style.color = 'orange';
                 return;
             }
 
             manualEntryStatus.textContent = "Getting location for manual entry...";
-            manualEntryStatus.className = "mt-3 font-semibold text-sm text-blue-600";
+            manualEntryStatus.style.color = 'blue';
             let geoData = { latitude: null, longitude: null, accuracy: null, geoError: null, timestamp: new Date().toISOString() };
 
             try {
                 const location = await fetchCurrentLocation();
                 geoData = {...geoData, ...location};
                 manualEntryStatus.textContent = "Manual entry added with location!";
-                manualEntryStatus.className = "mt-3 font-semibold text-sm text-green-600";
+                manualEntryStatus.style.color = 'green';
             } catch (error) {
                 geoData.geoError = error.message;
                 manualEntryStatus.textContent = `Manual entry added. Geo Error: ${error.message}`;
-                manualEntryStatus.className = "mt-3 font-semibold text-sm text-orange-600";
+                manualEntryStatus.style.color = 'darkorange';
             }
 
             scannedItems.push({
                 text: manualEntryText,
                 salesforceId: currentSalesforceId, 
                 manualDetails: manualDetailsPayload, 
-                scanType: itemScanType, 
+                scanType: itemScanType, // Store the determined scan type
                 ...geoData
             });
             updateScannedList();
@@ -915,7 +1200,6 @@
             selectedSalesforceTrailerId = null; 
             setTimeout(() => {
                 toggleManualEntryForm(false);
-                 manualEntryStatus.textContent = ""; // Clear status on close
             }, 1500);
         }
 
@@ -938,35 +1222,26 @@
             if(locationSelect) locationSelect.disabled = true;
             if(scannedByInput) scannedByInput.disabled = true;
             scanStatusElement.textContent = 'Initializing scanner...';
-            setStatusClasses(scanStatusElement, 'info');
-            
-            const qrboxSize = Math.min(qrReaderDivForLibrary.offsetWidth * 0.7, qrReaderDivForLibrary.offsetHeight * 0.7, 250);
-            const config = { fps: 10, qrbox: { width: qrboxSize, height: qrboxSize }, facingMode: "environment", aspectRatio: 1.0 };
-            
+            scanStatusElement.className = 'status-info';
+            const config = { fps: 10, qrbox: { width: 250, height: 250 }, facingMode: "environment" };
             try {
                 if (!html5QrCode) { 
                     html5QrCode = new Html5Qrcode("qr-reader");
                 }
                 if (html5QrCode.isScanning) {
                     console.log("Scanner is already running.");
-                     if(scanStatusElement) {
-                        scanStatusElement.textContent = 'Scanner is already active.';
-                        setStatusClasses(scanStatusElement, 'info');
-                     }
+                     if(scanStatusElement) scanStatusElement.textContent = 'Scanner is already active.';
                     return;
                 }
                 html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
                     .then(() => {
-                        if(scanStatusElement) {
-                            scanStatusElement.textContent = 'Scanner started. Point camera at QR code.';
-                            setStatusClasses(scanStatusElement, 'info'); // Or success, depending on preference
-                        }
+                        if(scanStatusElement) scanStatusElement.textContent = 'Scanner started. Point camera at QR code.';
                         if (scannerViewportContainer) scannerViewportContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     })
                     .catch(err => {
                         if(scanStatusElement) {
                             scanStatusElement.textContent = `Error starting scanner: ${err.message}. Try another camera or check permissions.`;
-                            setStatusClasses(scanStatusElement, 'error');
+                            scanStatusElement.className = 'status-error';
                         }
                         console.error("Error starting scanner:", err);
                         stopScanning(); 
@@ -974,7 +1249,7 @@
             } catch (e) {
                 if(scanStatusElement) {
                      scanStatusElement.textContent = `Scanner library error: ${e.message}.`;
-                     setStatusClasses(scanStatusElement, 'error');
+                     scanStatusElement.className = 'status-error';
                 }
                 console.error("Scanner instantiation/library error:", e);
                 stopScanning();
@@ -982,9 +1257,7 @@
         }
 
         function stopScanning() {
-             let wasScanning = false;
             if (html5QrCode && html5QrCode.isScanning) {
-                wasScanning = true;
                 console.log("Attempting to stop html5QrCode scanner...");
                 html5QrCode.stop()
                     .then(() => {
@@ -995,33 +1268,21 @@
                     })
                     .finally(() => {
                         if (qrReaderDivForLibrary) {
-                            // Clearing innerHTML can sometimes interfere with library's cleanup.
-                            // Often, the library itself handles clearing the reader element.
-                            // If issues arise, test with and without this line.
-                            // qrReaderDivForLibrary.innerHTML = ""; 
-                            console.log("qr-reader div potentially cleared or handled by library.");
+                            qrReaderDivForLibrary.innerHTML = ""; 
+                            console.log("qr-reader div cleared.");
                         }
                     });
             } else {
                  if (qrReaderDivForLibrary && qrReaderDivForLibrary.innerHTML !== "") {
-                    // qrReaderDivForLibrary.innerHTML = ""; // See comment above
-                    console.log("qr-reader div had content but scanner was not active or instance was null.");
+                    qrReaderDivForLibrary.innerHTML = "";
+                    console.log("qr-reader div cleared (scanner was not active or instance was null but div had content).");
                 }
             }
 
-            // Only update status if it wasn't an error during start
-            if (scanStatusElement) {
-                const currentText = scanStatusElement.textContent || "";
-                 if (!currentText.toLowerCase().includes("error starting scanner") && wasScanning) {
-                    scanStatusElement.textContent = 'Scanner stopped.';
-                    setStatusClasses(scanStatusElement, 'info');
-                } else if (!wasScanning && !currentText.toLowerCase().includes("error")) {
-                    // If it wasn't scanning, but no error, perhaps it was never started or already stopped
-                    scanStatusElement.textContent = 'Ready to scan or scanner already stopped.';
-                    setStatusClasses(scanStatusElement, 'info');
-                }
+            if (scanStatusElement && !scanStatusElement.textContent.startsWith("Error starting scanner")) {
+                scanStatusElement.textContent = 'Scanner stopped.';
+                scanStatusElement.className = 'status-info';
             }
-
             if(startButton) startButton.disabled = false;
             if(stopButton) stopButton.disabled = true;
             if(locationSelect) locationSelect.disabled = false; 
@@ -1069,10 +1330,7 @@
                 dateScannedInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             } catch (e) {
                 console.error("Error setting date:", e);
-                if (scanStatusElement) {
-                    scanStatusElement.textContent = "Error initializing date.";
-                    setStatusClasses(scanStatusElement, 'error');
-                }
+                if (scanStatusElement) scanStatusElement.textContent = "Error initializing date.";
             }
 
             if (salesforceLoginButton) salesforceLoginButton.onclick = salesforceLogin;
@@ -1099,19 +1357,13 @@
                         .catch(e => console.warn("Explicit geo request failed:", e.message))
                         .finally(() => {
                              if (checkLocationButton && checkLocationButton.textContent === "Checking..." && checkLocationButton.disabled) {
-                                // Reset button state if still "Checking..."
-                                 setTimeout(() => {
-                                    if (checkLocationButton && checkLocationButton.textContent === "Checking..."){
+                                setTimeout(() => {
+                                    if (checkLocationButton && checkLocationButton.textContent === "Checking..."){ 
                                         checkLocationButton.disabled = false;
-                                        // updateCheckLocationButtonText will be called by permission change or error in requestGeolocationPermission
-                                        // but if it's stuck, this is a fallback.
-                                        if (!navigator.geolocation || typeof navigator.permissions?.query !== 'function') {
-                                            updateCheckLocationButtonText('prompt'); // or a more specific state
-                                        } else {
-                                            navigator.permissions.query({name:'geolocation'}).then(ps => updateCheckLocationButtonText(ps.state));
-                                        }
+                                        checkLocationButton.textContent = "Retry Location";
+                                        updateCheckLocationButtonText('prompt'); 
                                     }
-                                }, 1000);
+                                }, 1000); 
                             }
                         });
                 });
@@ -1147,12 +1399,8 @@
 
             if (scanStatusElement) {
                 scanStatusElement.textContent = 'Fill session info & click "Start Scanning". Or login to Salesforce.';
-                setStatusClasses(scanStatusElement, 'info');
+                scanStatusElement.className = 'status-info';
             }
-            if (salesforceStatusElement) { // Initialize Salesforce status correctly
-                setStatusClasses(salesforceStatusElement, 'info');
-            }
-
             checkInitialGeolocationPermission();
             checkSalesforceSession(); 
 
@@ -1161,14 +1409,14 @@
                     if (!devices || !devices.length) {
                         if (scanStatusElement) {
                             scanStatusElement.textContent = 'No cameras found. Ensure camera and permissions are enabled.';
-                            setStatusClasses(scanStatusElement, 'error');
+                            scanStatusElement.className = 'status-error';
                         }
                         if (startButton) startButton.disabled = true;
                     }
                 }).catch(err => {
                     if (scanStatusElement) {
                         scanStatusElement.textContent = 'Could not access cameras. Check browser permissions.';
-                        setStatusClasses(scanStatusElement, 'error');
+                        scanStatusElement.className = 'status-error';
                     }
                     if (startButton) startButton.disabled = true;
                     console.error("Error getting cameras", err);
@@ -1177,7 +1425,7 @@
                 console.error("Html5Qrcode library not loaded for camera check!");
                  if (scanStatusElement) {
                     scanStatusElement.textContent = 'QR Scanner library not loaded.';
-                    setStatusClasses(scanStatusElement, 'error');
+                    scanStatusElement.className = 'status-error';
                 }
                 if (startButton) startButton.disabled = true;
             }
