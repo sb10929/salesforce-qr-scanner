@@ -64,41 +64,40 @@
             letter-spacing: 0.5px;
             text-transform: uppercase;
             transition: background-color 0.3s ease, transform 0.2s ease;
-            display: inline-block; /* Allows margin auto for centering if needed, and respects padding */
+            display: inline-block; 
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
         .sf-login-button:hover {
-            background-color: #005fb3; /* Darker Salesforce Blue on hover */
-            transform: translateY(-2px); /* Slight lift on hover */
+            background-color: #005fb3; 
+            transform: translateY(-2px); 
         }
 
         .sf-login-button:active {
             background-color: #004a8c;
-            transform: translateY(0px); /* Push back down on click */
+            transform: translateY(0px); 
         }
 
         .sf-status-message {
             margin-top: 15px;
             padding: 10px 15px;
             border-radius: 5px;
-            font-weight: 500; /* Slightly less bold than the button */
+            font-weight: 500; 
             font-size: 0.95em;
-            /* The status-info, status-success, status-error classes will handle background/text colors */
         }
 
         .sf-status-message.status-success {
-            background-color: #d4edda; /* Lighter green for success */
+            background-color: #d4edda; 
             color: #155724;
             border: 1px solid #c3e6cb;
         }
         .sf-status-message.status-error {
-            background-color: #f8d7da; /* Lighter red for error */
+            background-color: #f8d7da; 
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
         .sf-status-message.status-info {
-            background-color: #d1ecf1; /* Lighter info blue */
+            background-color: #d1ecf1; 
             color: #0c5460;
             border: 1px solid #bee5eb;
         }
@@ -416,15 +415,46 @@
             <h3>Manual Trailer Entry</h3>
             <div class="form-group">
                 <label for="manualMake">Make:</label>
-                <input type="text" id="manualMake" placeholder="Enter trailer make">
+                <input type="text" id="manualMake" placeholder="Enter trailer make (Required)">
             </div>
             <div class="form-group">
                 <label for="manualVin">VIN:</label>
-                <input type="text" id="manualVin" placeholder="Enter trailer VIN">
+                <input type="text" id="manualVin" placeholder="Enter trailer VIN (Required)">
                 <small id="vinSearchHelp" style="display: block; font-size: 0.8em; color: #555; margin-top: 3px;">
-                    Type at least 4 characters to search.
+                    Type at least 4 characters to search. If found & selected, some fields below may not be required.
                 </small>
                 <div id="vinSearchResults" class="vin-search-results" style="display:none;"></div>
+            </div>
+            <div class="form-group">
+                <label for="manualNewType">Type (Required if not found in SF):</label>
+                <select id="manualNewType">
+                    <option value="">-- Select Type --</option>
+                    <option value="New - In Stock">New - In Stock</option>
+                    <option value="New - On Order">New - On Order</option>
+                    <option value="Customer Trailer">Customer Trailer</option>
+                    <option value="Brokerage(Customer Owned)">Brokerage(Customer Owned)</option>
+                    <option value="Used">Used</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="manualTrailerType">Trailer Type (Required if not found in SF):</label>
+                <select id="manualTrailerType">
+                    <option value="">-- Select Trailer Type --</option>
+                    <option value="Pontoon">Pontoon</option>
+                    <option value="Inboard">Inboard</option>
+                    <option value="Runabout">Runabout</option>
+                    <option value="PWC">PWC</option>
+                    <option value="Center Console">Center Console</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="manualModel">Model:</label>
+                <input type="text" id="manualModel" placeholder="Enter trailer model (Optional)">
+            </div>
+            <div class="form-group">
+                <label for="manualTrailerOwner">Trailer Owner:</label>
+                <input type="text" id="manualTrailerOwner" placeholder="Enter trailer owner (Optional)">
             </div>
             <button id="addManualEntryButton" class="controls-button" style="margin-right: 10px;">Add to List</button>
             <button id="cancelManualEntryButton" class="controls-button" style="background-color: #6c757d;">Cancel</button>
@@ -471,11 +501,10 @@
 
     <script>
         // --- Global State & Salesforce Configuration ---
-        const SF_LOGIN_URL = 'https://login.salesforce.com'; // For Production/Dev Orgs
-        // const SF_LOGIN_URL = 'https://test.salesforce.com'; // For Sandboxes - UNCOMMENT IF USING SANDBOX
-        const SF_CLIENT_ID = '3MVG9CEn_O3jvv0xeuSn24uJCAhIryOkfnoEp2ZgmnvNi52WNzeAiPJL.30DLpudVIe0MTsA1RutfP7vq2abX'; // YOUR ACTUAL CLIENT ID
-        const SF_REDIRECT_URI = 'https://sb10929.github.io/salesforce-qr-scanner/'; // YOUR ACTUAL CALLBACK URL
-        const PLATFORM_EVENT_API_NAME = 'QR_Scan_Event__e'; // YOUR ACTUAL PLATFORM EVENT API NAME
+        const SF_LOGIN_URL = 'https://login.salesforce.com'; 
+        const SF_CLIENT_ID = '3MVG9CEn_O3jvv0xeuSn24uJCAhIryOkfnoEp2ZgmnvNi52WNzeAiPJL.30DLpudVIe0MTsA1RutfP7vq2abX'; 
+        const SF_REDIRECT_URI = 'https://sb10929.github.io/salesforce-qr-scanner/'; 
+        const PLATFORM_EVENT_API_NAME = 'QR_Scan_Event__e'; 
         const SF_VIN_SEARCH_OBJECT = 'Marine__Trailer__c'; 
         const SF_VIN_FIELD_API_NAME = 'Marine__VIN__c'; 
         const SF_MAKE_FIELD_API_NAME = 'Marine__Make__c'; 
@@ -488,13 +517,14 @@
         let vinSearchDebounceTimer = null; 
         let selectedSalesforceTrailerId = null; 
 
-        // --- DOM Element Variables (will be assigned in DOMContentLoaded) ---
+        // --- DOM Element Variables ---
         let locationSelect, scannedByInput, dateScannedInput, scannerViewportContainer,
             qrReaderDivForLibrary, scanStatusElement, scannedItemsListElement,
             startButton, stopButton, sendButton, checkLocationButton, scanSuccessOverlay,
             toggleManualEntryButton, manualEntryFormContainer, manualMakeInput,
             manualVinInput, addManualEntryButton, cancelManualEntryButton, manualEntryStatus,
-            salesforceLoginButton, salesforceStatusElement;
+            salesforceLoginButton, salesforceStatusElement,
+            manualNewTypeSelect, manualTrailerTypeSelect, manualModelInput, manualTrailerOwnerInput;
         let vinSearchResultsDiv, vinSearchHelpText;
 
 
@@ -520,7 +550,7 @@
                 salesforceStatusElement.className = 'sf-status-message status-success';
                 if (sendButton) sendButton.disabled = scannedItems.length === 0;
 
-            } else { // Not logged in
+            } else { 
                 salesforceLoginButton.textContent = 'Login to Salesforce';
                 salesforceLoginButton.onclick = salesforceLogin;
                 salesforceStatusElement.textContent = message || 'Not logged into Salesforce. Please login to send data.';
@@ -573,7 +603,7 @@
         }
 
         function checkSalesforceSession() {
-            console.log("Checking Salesforce session (v5 - Generic Login Msg)...");
+            console.log("Checking Salesforce session...");
             if (typeof jsforce === 'undefined') {
                 console.error("jsforce library is not loaded for session check!");
                 updateSalesforceLoginStatus(false, "JSforce library error.");
@@ -647,15 +677,11 @@
                 updateSalesforceLoginStatus(true, "User info missing. Re-login needed."); 
                 return;
             }
-
-            // --- MODIFIED: Location Check ---
             if (!locationSelect || !locationSelect.value) { 
                 alert("Please select a Location.");
                 if (locationSelect) locationSelect.focus();
                 return;
             }
-            // --- END MODIFICATION ---
-
             if (!scannedByInput || !scannedByInput.value.trim()) {
                 alert("Please ensure 'Scanned By' field (your name) is filled.");
                 if (scannedByInput) scannedByInput.focus();
@@ -672,18 +698,16 @@
 
             const platformEventsToSend = [];
             const sessionInfoData = {
-                location: locationSelect.value, // Will now be the selected value
+                location: locationSelect.value,
                 scannedByText: scannedByInput.value.trim(), 
                 dateScanned: dateScannedInput.value
             };
 
             for (const item of scannedItems) {
-                let scanType = "QR";
                 let manualMake = null;
                 let manualVin = null;
 
-                if (item.text.startsWith("MANUAL:")) {
-                    scanType = "MANUAL";
+                if (item.scanType === "MANUAL" || item.scanType === "MANUAL_NEW") {
                     const parts = item.text.replace("MANUAL:", "").trim().split("- VIN:");
                     manualMake = parts[0]?.trim();
                     manualVin = parts[1]?.trim();
@@ -698,16 +722,38 @@
                     Longitude__c: item.longitude,
                     Accuracy__c: item.accuracy,
                     Geolocation_Timestamp__c: item.timestamp ? new Date(item.timestamp).toISOString() : null,
-                    Scan_Type__c: scanType,
+                    Scan_Type__c: item.scanType, // Use the stored scan type
                     Manual_Make__c: manualMake, 
                     Manual_VIN__c: manualVin,
                     Linked_Trailer_ID__c: item.salesforceId || null 
                 };
                 
+                if (item.manualDetails) { // Primarily for "MANUAL_NEW"
+                    eventPayload.Manual_New_Type__c = item.manualDetails.type; 
+                    eventPayload.Manual_Trailer_Type_Spec__c = item.manualDetails.trailerType; 
+                    if (item.manualDetails.model) {
+                        eventPayload.Manual_Model__c = item.manualDetails.model; 
+                    }
+                    if (item.manualDetails.owner) {
+                        eventPayload.Manual_Trailer_Owner__c = item.manualDetails.owner; 
+                    }
+                }
+                
                 if (!item.salesforceId && eventPayload.hasOwnProperty('Linked_Trailer_ID__c')) delete eventPayload.Linked_Trailer_ID__c;
                 if (item.geoError === null || typeof item.geoError === 'undefined') delete eventPayload.Geolocation_Error__c;
                 if (manualMake === null && eventPayload.hasOwnProperty('Manual_Make__c')) delete eventPayload.Manual_Make__c;
                 if (manualVin === null && eventPayload.hasOwnProperty('Manual_VIN__c')) delete eventPayload.Manual_VIN__c;
+                if (!item.manualDetails?.model && eventPayload.hasOwnProperty('Manual_Model__c')) delete eventPayload.Manual_Model__c;
+                if (!item.manualDetails?.owner && eventPayload.hasOwnProperty('Manual_Trailer_Owner__c')) delete eventPayload.Manual_Trailer_Owner__c;
+                // Ensure required manual details are not deleted if they were set (they should exist if scanType is MANUAL_NEW)
+                if (item.scanType === "MANUAL_NEW" && !item.manualDetails?.type && eventPayload.hasOwnProperty('Manual_New_Type__c')) {
+                     // This case shouldn't happen if validation in handleAddManualEntry is correct, but as a safeguard:
+                     console.warn("MANUAL_NEW item missing Manual_New_Type__c in payload prep. Item:", item);
+                }
+                if (item.scanType === "MANUAL_NEW" && !item.manualDetails?.trailerType && eventPayload.hasOwnProperty('Manual_Trailer_Type_Spec__c')) {
+                     console.warn("MANUAL_NEW item missing Manual_Trailer_Type_Spec__c in payload prep. Item:", item);
+                }
+
 
                 platformEventsToSend.push(eventPayload);
             }
@@ -797,6 +843,10 @@
                     selectedSalesforceTrailerId = itemDiv.dataset.id; 
                     console.log("Selected Salesforce Trailer ID:", selectedSalesforceTrailerId); 
                     clearVinSearchResults();
+                    if (manualNewTypeSelect) manualNewTypeSelect.value = "";
+                    if (manualTrailerTypeSelect) manualTrailerTypeSelect.value = "";
+                    if (manualModelInput) manualModelInput.value = "";
+                    if (manualTrailerOwnerInput) manualTrailerOwnerInput.value = "";
                 });
                 vinSearchResultsDiv.appendChild(itemDiv);
             });
@@ -878,9 +928,12 @@
             scannedItems.forEach(item => {
                 const listItem = document.createElement('li');
                 let displayText = item.text;
-                if (item.salesforceId) {
-                    displayText += ` <strong style="color: #28a745;">(SF Linked: ${item.salesforceId.substring(0, 6)}...)</strong>`;
+                if (item.scanType === "MANUAL") { // Linked to existing SF record
+                     displayText += ` <strong style="color: #28a745;">(SF Linked: ${item.salesforceId.substring(0, 6)}...)</strong>`;
+                } else if (item.scanType === "MANUAL_NEW") { // New manual entry
+                    displayText += ` <em style="color: #17a2b8;">(New Manual: ${item.manualDetails.type}, ${item.manualDetails.trailerType})</em>`;
                 }
+                // For QR, no specific trailer type indicator here unless you add it to item.text
 
                 let geoInfo = '';
                 if (item.geoError) {
@@ -997,7 +1050,7 @@
         async function onScanSuccess(decodedText, decodedResult) {
             if (!scanStatusElement || !scanSuccessOverlay) return;
             const trimmedDecodedText = decodedText.trim();
-            if (scannedItems.some(item => item.text === trimmedDecodedText)) {
+            if (scannedItems.some(item => item.text === trimmedDecodedText && item.scanType === "QR")) { // Ensure QR duplicates are checked
                 if(scanStatusElement) {
                     scanStatusElement.textContent = `"${trimmedDecodedText.substring(0,20)}..." already scanned.`;
                     scanStatusElement.className = 'status-info';
@@ -1025,7 +1078,13 @@
                     scanStatusElement.className = 'status-error'; 
                 }
             }
-            scannedItems.push({ text: trimmedDecodedText, salesforceId: null, ...geoData }); 
+            scannedItems.push({ 
+                text: trimmedDecodedText, 
+                salesforceId: null, 
+                manualDetails: null, 
+                scanType: "QR", // Explicitly set scan type for QR
+                ...geoData 
+            }); 
             updateScannedList();
             if (navigator.vibrate) navigator.vibrate(100);
             if(scanSuccessOverlay) setTimeout(() => scanSuccessOverlay.classList.remove('visible'), 1200);
@@ -1039,6 +1098,10 @@
                 if (show) {
                     if(manualMakeInput) manualMakeInput.value = '';
                     if(manualVinInput) manualVinInput.value = '';
+                    if(manualNewTypeSelect) manualNewTypeSelect.value = '';
+                    if(manualTrailerTypeSelect) manualTrailerTypeSelect.value = '';
+                    if(manualModelInput) manualModelInput.value = '';
+                    if(manualTrailerOwnerInput) manualTrailerOwnerInput.value = '';
                     if(manualEntryStatus) manualEntryStatus.textContent = '';
                     selectedSalesforceTrailerId = null; 
                     clearVinSearchResults(); 
@@ -1057,21 +1120,54 @@
         }
         
         async function handleAddManualEntry() {
-            if (!manualMakeInput || !manualVinInput || !manualEntryStatus) return;
+            if (!manualMakeInput || !manualVinInput || !manualEntryStatus ||
+                !manualNewTypeSelect || !manualTrailerTypeSelect || !manualModelInput || !manualTrailerOwnerInput) return;
+
             const make = manualMakeInput.value.trim();
             const vin = manualVinInput.value.trim();
-
+            
             if (!make || !vin) {
                 manualEntryStatus.textContent = "Make and VIN are required.";
                 manualEntryStatus.style.color = 'red';
+                if (!make) manualMakeInput.focus(); else manualVinInput.focus();
                 return;
             }
             
             const currentSalesforceId = selectedSalesforceTrailerId; 
             let manualEntryText = `MANUAL: ${make} - VIN: ${vin}`;
+            let manualDetailsPayload = null;
+            let itemScanType = "MANUAL"; // Default for linked entries
+
+            if (currentSalesforceId === null) { // This is a new trailer not found/selected from SF
+                itemScanType = "MANUAL_NEW";
+                const newType = manualNewTypeSelect.value;
+                const trailerType = manualTrailerTypeSelect.value;
+                const model = manualModelInput.value.trim();
+                const owner = manualTrailerOwnerInput.value.trim();
+
+                if (!newType) {
+                    manualEntryStatus.textContent = "Type is required for new trailer entries not found in Salesforce.";
+                    manualEntryStatus.style.color = 'red';
+                    manualNewTypeSelect.focus();
+                    return;
+                }
+                if (!trailerType) {
+                    manualEntryStatus.textContent = "Trailer Type is required for new trailer entries not found in Salesforce.";
+                    manualEntryStatus.style.color = 'red';
+                    manualTrailerTypeSelect.focus();
+                    return;
+                }
+                manualDetailsPayload = {
+                    type: newType,
+                    trailerType: trailerType,
+                    model: model || null,
+                    owner: owner || null
+                };
+            }
             
-            if (scannedItems.some(item => item.text.toUpperCase() === manualEntryText.toUpperCase() && item.salesforceId === currentSalesforceId )) {
-                manualEntryStatus.textContent = "This exact entry (including SF link) already exists.";
+            // Check for duplicates based on text and the determined scan type
+            if (scannedItems.some(item => item.text.toUpperCase() === manualEntryText.toUpperCase() && item.scanType === itemScanType && item.salesforceId === currentSalesforceId )) {
+                manualEntryStatus.textContent = "This exact entry (including link status and type) already exists.";
                 manualEntryStatus.style.color = 'orange';
                 return;
             }
@@ -1094,6 +1190,8 @@
             scannedItems.push({
                 text: manualEntryText,
                 salesforceId: currentSalesforceId, 
+                manualDetails: manualDetailsPayload, 
+                scanType: itemScanType, // Store the determined scan type
                 ...geoData
             });
             updateScannedList();
@@ -1108,14 +1206,11 @@
         function startScanning() {
             if (!scannedByInput || !startButton || !stopButton || !locationSelect || !scanStatusElement || !qrReaderDivForLibrary || !scannerViewportContainer) return;
             
-            // --- MODIFIED: Add location check before starting scanner ---
             if (!locationSelect.value) {
                 alert("Please select a Location before starting the scanner.");
                 locationSelect.focus();
                 return;
             }
-            // --- END MODIFICATION ---
-
             if (!scannedByInput.value.trim()) {
                 alert("Please enter your name in 'Scanned By' field.");
                 scannedByInput.focus();
@@ -1190,8 +1285,8 @@
             }
             if(startButton) startButton.disabled = false;
             if(stopButton) stopButton.disabled = true;
-            if(locationSelect) locationSelect.disabled = false; // Re-enable location select
-            if(scannedByInput) scannedByInput.disabled = false; // Re-enable scanned by
+            if(locationSelect) locationSelect.disabled = false; 
+            if(scannedByInput) scannedByInput.disabled = false; 
         }
 
         // --- DOMContentLoaded: Initialization and Event Binding ---
@@ -1221,9 +1316,13 @@
             salesforceStatusElement = document.getElementById('salesforceStatus');
             vinSearchResultsDiv = document.getElementById('vinSearchResults'); 
             vinSearchHelpText = document.getElementById('vinSearchHelp'); 
+            manualNewTypeSelect = document.getElementById('manualNewType');
+            manualTrailerTypeSelect = document.getElementById('manualTrailerType');
+            manualModelInput = document.getElementById('manualModel');
+            manualTrailerOwnerInput = document.getElementById('manualTrailerOwner');
 
             if (vinSearchHelpText) {
-                vinSearchHelpText.textContent = `Type at least ${MIN_VIN_SEARCH_LENGTH} characters to search.`;
+                vinSearchHelpText.textContent = `Type at least ${MIN_VIN_SEARCH_LENGTH} characters to search. If found & selected, some fields below may not be required.`;
             }
 
             try {
@@ -1287,7 +1386,7 @@
             if (manualVinInput) {
                 manualVinInput.addEventListener('input', handleVinInput);
                 manualVinInput.addEventListener('blur', () => {
-                    setTimeout(clearVinSearchResults, 200);
+                    setTimeout(clearVinSearchResults, 200); 
                 });
                 manualVinInput.addEventListener('keydown', (event) => {
                     if (event.key === "Escape") {
