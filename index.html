@@ -180,9 +180,10 @@
 
         /* --- NEW FIX FOR CAMERA VIEWPORT --- */
         /* This forces the video stream to fit inside its container, preventing overflow. */
-        #qr-reader video {
-            width: 100% !important;
-            height: auto !important;
+    #qr-reader__scan_region,
+    #qr-reader video {
+    width: 100% !important;
+    height: auto !important;
         }
         
         #qr-reader__dashboard_section_csr span button {
