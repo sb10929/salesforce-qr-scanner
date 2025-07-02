@@ -420,6 +420,18 @@
             </div>
         </div>
 
+        <div id="initial-setup-instructions">
+             <div class="instructions" style="text-align: left; margin-top: 20px;">
+                <p><strong>To begin, please complete the following steps:</strong></p>
+                <ol>
+                    <li>Login to Salesforce using the button above.</li>
+                    <li>Enable location services for this app by clicking here: <button id="checkLocationButton">Enable Location</button></li>
+                </ol>
+             </div>
+        </div>
+
+    <div id="main-app-content" style="display: none;">
+
         <div class="session-inputs">
             <h2>Session Information</h2>
             <div class="form-group">
@@ -535,6 +547,7 @@
             <ul id="scanned-items-list"></ul>
         </div>
     </div>
+    </div>
 
     <script>
         // The entire <script> block remains exactly the same.
@@ -554,6 +567,8 @@
         let html5QrCode = null;
         let vinSearchDebounceTimer = null; 
         let selectedSalesforceTrailerId = null; 
+        let isSalesforceLoggedIn = false;
+        let isLocationEnabled = false;
 
         // --- DOM Element Variables ---
         let locationSelect, scannedByInput, dateScannedInput, scannerViewportContainer,
@@ -565,9 +580,27 @@
             manualNewTypeSelect, manualTrailerTypeSelect, manualModelInput, manualTrailerOwnerInput;
         let vinSearchResultsDiv, vinSearchHelpText;
 
+        function checkAndShowAppContent() {
+            const mainAppContent = document.getElementById('main-app-content');
+            const setupInstructions = document.getElementById('initial-setup-instructions');
+
+            if (!mainAppContent || !setupInstructions) return;
+
+            if (isSalesforceLoggedIn && isLocationEnabled) {
+                // If both conditions are met, show the app and hide instructions
+                mainAppContent.style.display = 'block';
+                setupInstructions.style.display = 'none';
+            } else {
+                // Otherwise, hide the app and show instructions
+                mainAppContent.style.display = 'none';
+                setupInstructions.style.display = 'block';
+            }
+        }
 
         // --- Salesforce Authentication & Utility Functions ---
         function updateSalesforceLoginStatus(isLoggedIn, message) {
+            isSalesforceLoggedIn = isLoggedIn;
+            checkAndShowAppContent();
             if (!salesforceLoginButton || !salesforceStatusElement) {
                 console.error("updateSalesforceLoginStatus: Salesforce UI elements not found.");
                 return;
@@ -1005,6 +1038,12 @@
         }
 
         function updateCheckLocationButtonText(state) {
+            if (state === 'granted') {
+            isLocationEnabled = true;
+            } else {
+            isLocationEnabled = false;
+            }
+    checkAndShowAppContent();
             if (!checkLocationButton) return;
             if (state === 'granted') {
                 checkLocationButton.textContent = 'Location Enabled';
@@ -1440,7 +1479,9 @@
                 scanStatusElement.className = 'status-info';
             }
             checkInitialGeolocationPermission();
-            checkSalesforceSession(); 
+            checkSalesforceSession();
+
+            checkAndShowAppContent();
 
             if (typeof Html5Qrcode !== 'undefined') {
                 Html5Qrcode.getCameras().then(devices => {
