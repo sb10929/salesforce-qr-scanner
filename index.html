@@ -5,10 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Salesforce QR Scanner</title>
     <style>
+        /* --- FIX: Prevent horizontal scrolling --- */
+        html, body {
+            overflow-x: hidden;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
-            padding: 20px;
+            /* Padding moved to .container for better layout control */
+            padding: 0; 
             background-color: #f4f7f6;
             color: #333;
             display: flex;
@@ -26,6 +32,10 @@
             width: 100%;
             max-width: 500px;
             text-align: center;
+            /* Added box-sizing here to contain the padding */
+            box-sizing: border-box; 
+            /* Added margin-top/bottom for spacing since body padding is gone */
+            margin: 20px 0;
         }
 
         h1 {
@@ -376,6 +386,7 @@
 </head>
 <body>
     <div class="container">
+        <!-- All your HTML content from the original body goes here -->
         <h1>Salesforce QR Scanner</h1>
 
         <div id="salesforce-login-section" class="salesforce-login-area">
@@ -500,6 +511,7 @@
     </div>
 
     <script>
+        // The entire <script> block remains exactly the same.
         // --- Global State & Salesforce Configuration ---
         const SF_LOGIN_URL = 'https://login.salesforce.com'; 
         const SF_CLIENT_ID = '3MVG9CEn_O3jvv0xeuSn24uJCAhIryOkfnoEp2ZgmnvNi52WNzeAiPJL.30DLpudVIe0MTsA1RutfP7vq2abX'; 
