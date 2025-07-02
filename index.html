@@ -514,7 +514,6 @@
             <p><strong>Instructions:</strong></p>
             <ol>
                 <li>Fill in Session Information above.</li>
-                <li><button id="checkLocationButton">Check/Enable Location</button> (Recommended)</li>
                 <li>Click "Start Scanning" to activate the camera.</li>
                 <li>Allow camera and location permissions if prompted.</li>
                 <li>Point your camera at a QR code. Geolocation will be captured.</li>
@@ -1426,27 +1425,18 @@
 
             if (checkLocationButton) {
                 checkLocationButton.addEventListener('click', () => {
-                    // Immediately disable the button and show a "Checking..." status
-                    // to prevent multiple clicks and give user feedback.
+                    // Give the user immediate feedback
                     checkLocationButton.disabled = true;
                     checkLocationButton.textContent = "Checking...";
-            
-                    // Call the function that actually handles the browser permission prompt
-                    // and all subsequent UI updates (changing button color, text, etc.)
-                    requestGeolocationPermission(true)
-                        .catch(err => {
-                            // This catch is a fallback. If the request fails for any reason,
-                            // we ensure the button is re-enabled so the user can try again.
-                            // The requestGeolocationPermission function itself handles most of this.
-                            console.warn("Explicit location request failed:", err.message);
-                            if (checkLocationButton) {
-                                checkLocationButton.disabled = false;
-                                // updateCheckLocationButtonText() will have already been called
-                                // in the error callback of the request, so we don't need to do more.
-                            }
-                        });
+
+                    // Call the function. It does NOT return a promise.
+                    // It handles all success/error UI updates internally via its callbacks.
+                    // The previous error was trying to chain ".catch()" to this call.
+                    requestGeolocationPermission(true); 
                 });
-            } else console.error("checkLocationButton not found!");
+            } else {
+                console.error("checkLocationButton not found! This is expected if the app content is already visible.");
+            }
 
             if (toggleManualEntryButton) {
                 toggleManualEntryButton.addEventListener('click', () => {
