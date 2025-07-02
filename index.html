@@ -162,12 +162,17 @@
             background-color: #e9ecef;
         }
 
+        /* ============================================================== */
+        /* === FIX FOR ALL SCANNER & SCROLLING ISSUES (REPLACE OLD CSS) === */
+        /* ============================================================== */
+
         .scanner-viewport-container {
             position: relative;
             width: 100%;
             max-width: 400px;
             margin: 20px auto;
             border-radius: 8px;
+            /* overflow: hidden is critical to clip any misbehaving children */
             overflow: hidden;
         }
 
@@ -176,16 +181,26 @@
             border: 1px solid #ddd;
             border-radius: 8px;
             background-color: #333;
+            /* This is the key fix for the container itself. It ensures the 1px border
+               is included INSIDE the 100% width, not added to it. */
             box-sizing: border-box;
         }
 
-        /* This forces the dynamically added video to be responsive, 
-   preventing it from overflowing the now correctly-sized #qr-reader container. */
-#qr-reader video {
-    width: 100% !important;
-    height: auto !important;
-}
+        /* This rule targets the dynamically injected video and forces it to be
+           responsive within the container we just fixed. */
+        #qr-reader video {
+            width: 100% !important;
+            height: auto !important;
+        }
+
+        /* This rule targets the library's UI dashboard (e.g., "Switch Camera" buttons)
+           and forces it to wrap onto new lines if there isn't enough horizontal space,
+           preventing it from creating overflow. */
+        #qr-reader__dashboard {
+            flex-wrap: wrap !important;
+        }
         
+        /* Your original styles for the buttons within the dashboard. */
         #qr-reader__dashboard_section_csr span button {
             background-color: #0070d2 !important;
             color: white !important;
@@ -197,6 +212,10 @@
         #qr-reader__dashboard_section_csr span button:hover {
             background-color: #005fb3 !important;
         }
+
+        /* ============================================================== */
+        /* ===================== END OF FIX BLOCK ======================= */
+        /* ============================================================== */
 
         #scan-success-overlay {
             position: absolute;
