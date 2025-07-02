@@ -1426,21 +1426,23 @@
 
             if (checkLocationButton) {
                 checkLocationButton.addEventListener('click', () => {
-                    if (checkLocationButton) { 
-                        checkLocationButton.disabled = true;
-                        checkLocationButton.textContent = "Checking...";
-                    }
-                    requestGeolocationPermission(true) 
-                        .catch(e => console.warn("Explicit geo request failed:", e.message))
-                        .finally(() => {
-                             if (checkLocationButton && checkLocationButton.textContent === "Checking..." && checkLocationButton.disabled) {
-                                setTimeout(() => {
-                                    if (checkLocationButton && checkLocationButton.textContent === "Checking..."){ 
-                                        checkLocationButton.disabled = false;
-                                        checkLocationButton.textContent = "Retry Location";
-                                        updateCheckLocationButtonText('prompt'); 
-                                    }
-                                }, 1000); 
+                    // Immediately disable the button and show a "Checking..." status
+                    // to prevent multiple clicks and give user feedback.
+                    checkLocationButton.disabled = true;
+                    checkLocationButton.textContent = "Checking...";
+            
+                    // Call the function that actually handles the browser permission prompt
+                    // and all subsequent UI updates (changing button color, text, etc.)
+                    requestGeolocationPermission(true)
+                        .catch(err => {
+                            // This catch is a fallback. If the request fails for any reason,
+                            // we ensure the button is re-enabled so the user can try again.
+                            // The requestGeolocationPermission function itself handles most of this.
+                            console.warn("Explicit location request failed:", err.message);
+                            if (checkLocationButton) {
+                                checkLocationButton.disabled = false;
+                                // updateCheckLocationButtonText() will have already been called
+                                // in the error callback of the request, so we don't need to do more.
                             }
                         });
                 });
