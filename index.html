@@ -176,15 +176,15 @@
             border: 1px solid #ddd;
             border-radius: 8px;
             background-color: #333;
+            box-sizing: border-box;
         }
 
-        /* --- NEW FIX FOR CAMERA VIEWPORT --- */
-        /* This forces the video stream to fit inside its container, preventing overflow. */
-    #qr-reader__scan_region,
-    #qr-reader video {
+        /* This forces the dynamically added video to be responsive, 
+   preventing it from overflowing the now correctly-sized #qr-reader container. */
+#qr-reader video {
     width: 100% !important;
     height: auto !important;
-        }
+}
         
         #qr-reader__dashboard_section_csr span button {
             background-color: #0070d2 !important;
