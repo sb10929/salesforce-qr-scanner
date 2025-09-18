@@ -158,7 +158,8 @@
             box-sizing: border-box;
             font-size: 0.9em;
         }
-        .form-group input[readonly] {
+        .form-group input[readonly],
+        .form-group select[disabled] {
             background-color: #e9ecef;
         }
 
@@ -172,8 +173,7 @@
             max-width: 400px;
             margin: 20px auto;
             border-radius: 8px;
-            /* overflow: hidden is critical to clip any misbehaving children */
-            overflow: hidden;
+            overflow: hidden; 
         }
 
         #qr-reader {
@@ -181,26 +181,16 @@
             border: 1px solid #ddd;
             border-radius: 8px;
             background-color: #333;
-            /* This is the key fix for the container itself. It ensures the 1px border
-               is included INSIDE the 100% width, not added to it. */
             box-sizing: border-box;
         }
 
-        /* This rule targets the dynamically injected video and forces it to be
-           responsive within the container we just fixed. */
         #qr-reader video {
             width: 100% !important;
             height: auto !important;
         }
-
-        /* This rule targets the library's UI dashboard (e.g., "Switch Camera" buttons)
-           and forces it to wrap onto new lines if there isn't enough horizontal space,
-           preventing it from creating overflow. */
         #qr-reader__dashboard {
             flex-wrap: wrap !important;
         }
-        
-        /* Your original styles for the buttons within the dashboard. */
         #qr-reader__dashboard_section_csr span button {
             background-color: #0070d2 !important;
             color: white !important;
@@ -213,9 +203,41 @@
             background-color: #005fb3 !important;
         }
 
-        /* ============================================================== */
-        /* ===================== END OF FIX BLOCK ======================= */
-        /* ============================================================== */
+        /* --- ENHANCEMENT: Scanning Laser and Viewfinder --- */
+        .scanner-viewport-container::after {
+            content: '';
+            display: block;
+            position: absolute;
+            top: 50%;
+            left: 5%;
+            right: 5%;
+            height: 2px;
+            background: linear-gradient(to right, transparent, rgba(255, 0, 0, 0.8), transparent);
+            box-shadow: 0 0 5px rgba(255, 0, 0, 0.7);
+            animation: scanning 2.5s infinite linear;
+            border-radius: 2px;
+            z-index: 10;
+        }
+        
+        @keyframes scanning {
+            0% { transform: translateY(-70px); }
+            50% { transform: translateY(70px); }
+            100% { transform: translateY(-70px); }
+        }
+
+        .scanner-viewport-container::before {
+            content: '';
+            position: absolute;
+            top: 10%;
+            left: 10%;
+            right: 10%;
+            bottom: 10%;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.3);
+            z-index: 5;
+            pointer-events: none;
+        }
+
 
         #scan-success-overlay {
             position: absolute;
@@ -364,18 +386,38 @@
             padding: 10px;
         }
         #scanned-items-list li {
-            padding: 8px 0;
+            padding: 8px 5px;
             border-bottom: 1px solid #f0f0f0;
             word-break: break-all;
             font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         #scanned-items-list li:last-child {
             border-bottom: none;
         }
+        .item-content {
+            flex-grow: 1;
+        }
         .item-geo {
             font-size: 0.8em;
             color: #777;
-            margin-left: 10px;
+            display: block; /* Geo info on a new line for clarity */
+            margin-left: 0;
+        }
+        .remove-item-btn {
+            background: transparent;
+            border: none;
+            color: #dc3545;
+            font-size: 1.4em;
+            cursor: pointer;
+            padding: 0 10px;
+            font-weight: bold;
+            line-height: 1;
+        }
+        .remove-item-btn:hover {
+            color: #a71d2a;
         }
         .instructions {
             font-size: 0.9em;
@@ -410,7 +452,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- The HTML body is unchanged -->
         <h1>Salesforce QR Scanner</h1>
 
         <div id="salesforce-login-section" class="salesforce-login-area">
@@ -536,20 +577,32 @@
         <div id="scan-status" class="status-info">Initializing...</div>
 
         <div class="controls">
-            <button id="startButton">Start Scanning</button>
+            <!-- --- ENHANCEMENT: Added SVG Icons to buttons --- -->
+            <button id="startButton">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle; margin-right: 8px;">
+                    <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm11.5 5.5a.5.5 0 0 0 0-1h-11a.5.5 0 0 0 0 1h11z"/>
+                    <path d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm12 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12z"/>
+                </svg>
+                Start Scanning
+            </button>
             <button id="stopButton" disabled>Stop Scanning</button>
-            <button id="sendButton" disabled>Send to Salesforce</button>
+            <button id="sendButton" disabled>
+                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle; margin-right: 8px;">
+                    <path d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383zm.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.785 2.23 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z"/>
+                    <path d="M7.646 15.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 14.293V5.5a.5.5 0 0 0-1 0v8.793l-2.146-2.147a.5.5 0 0 0-.708.708l3 3z"/>
+                </svg>
+                Send to Salesforce
+            </button>
         </div>
 
         <div id="scanned-items-container">
-            <h2>Scanned Items:</h2>
+            <h2>Scanned Items: (0)</h2>
             <ul id="scanned-items-list"></ul>
         </div>
     </div>
     </div>
 
     <script>
-        // The entire <script> block remains exactly the same.
         // --- Global State & Salesforce Configuration ---
         const SF_LOGIN_URL = 'https://login.salesforce.com'; 
         const SF_CLIENT_ID = '3MVG9CEn_O3jvv0xeuSn24uJCAhIryOkfnoEp2ZgmnvNi52WNzeAiPJL.30DLpudVIe0MTsA1RutfP7vq2abX'; 
@@ -579,18 +632,47 @@
             manualNewTypeSelect, manualTrailerTypeSelect, manualModelInput, manualTrailerOwnerInput;
         let vinSearchResultsDiv, vinSearchHelpText;
 
+        // --- ENHANCEMENT: Functions for state persistence ---
+        function saveStateToLocalStorage() {
+            try {
+                const state = {
+                    location: locationSelect.value,
+                    scannedBy: scannedByInput.value,
+                    scannedItems: scannedItems
+                };
+                localStorage.setItem('qrScannerState', JSON.stringify(state));
+            } catch (e) {
+                console.error("Could not save state to localStorage:", e);
+            }
+        }
+
+        function loadStateFromLocalStorage() {
+            try {
+                const savedState = localStorage.getItem('qrScannerState');
+                if (savedState) {
+                    const state = JSON.parse(savedState);
+                    if (locationSelect && state.location) locationSelect.value = state.location;
+                    if (scannedByInput && state.scannedBy) scannedByInput.value = state.scannedBy;
+                    if (state.scannedItems && Array.isArray(state.scannedItems)) {
+                        scannedItems.push(...state.scannedItems);
+                        updateScannedList();
+                    }
+                    console.log("State loaded from localStorage.");
+                }
+            } catch (e) {
+                console.error("Could not load state from localStorage:", e);
+                localStorage.removeItem('qrScannerState'); // Clear corrupted state
+            }
+        }
+
         function checkAndShowAppContent() {
             const mainAppContent = document.getElementById('main-app-content');
             const setupInstructions = document.getElementById('initial-setup-instructions');
-
             if (!mainAppContent || !setupInstructions) return;
-
             if (isSalesforceLoggedIn && isLocationEnabled) {
-                // If both conditions are met, show the app and hide instructions
                 mainAppContent.style.display = 'block';
                 setupInstructions.style.display = 'none';
             } else {
-                // Otherwise, hide the app and show instructions
                 mainAppContent.style.display = 'none';
                 setupInstructions.style.display = 'block';
             }
@@ -600,161 +682,76 @@
         function updateSalesforceLoginStatus(isLoggedIn, message) {
             isSalesforceLoggedIn = isLoggedIn;
             checkAndShowAppContent();
-            if (!salesforceLoginButton || !salesforceStatusElement) {
-                console.error("updateSalesforceLoginStatus: Salesforce UI elements not found.");
-                return;
-            }
+            if (!salesforceLoginButton || !salesforceStatusElement) return;
 
             if (isLoggedIn) {
                 salesforceLoginButton.textContent = 'Logout from Salesforce';
                 salesforceLoginButton.onclick = salesforceLogout;
-
-                if (sfConnection && sfConnection.userInfo && sfConnection.userInfo.id) {
-                    salesforceStatusElement.textContent = 'Logged in Successfully.'; 
-                    console.log("User logged in. ID:", sfConnection.userInfo.id); 
-                } else {
-                    salesforceStatusElement.textContent = 'Logged in (Connection issue).';
-                    console.warn("updateSalesforceLoginStatus: isLoggedIn is true, but sfConnection or userInfo is problematic.", 
-                                 sfConnection ? sfConnection.userInfo : "sfConnection is null");
-                }
+                salesforceStatusElement.textContent = 'Logged in Successfully.';
                 salesforceStatusElement.className = 'sf-status-message status-success';
-                if (sendButton) sendButton.disabled = scannedItems.length === 0;
-
-            } else { 
+                updateScannedList(); // Re-check send button status
+            } else {
                 salesforceLoginButton.textContent = 'Login to Salesforce';
                 salesforceLoginButton.onclick = salesforceLogin;
                 salesforceStatusElement.textContent = message || 'Not logged into Salesforce. Please login to send data.';
-                if (message && (message.toLowerCase().includes('fail') || message.toLowerCase().includes('error'))) {
-                    salesforceStatusElement.className = 'sf-status-message status-error';
-                } else {
-                    salesforceStatusElement.className = 'sf-status-message status-info';
-                }
-                if (sendButton) sendButton.disabled = true;
+                salesforceStatusElement.className = `sf-status-message ${message && (message.includes('fail') || message.includes('error')) ? 'status-error' : 'status-info'}`;
+                updateScannedList(); // Re-check send button status
             }
         }
 
         function salesforceLogin() {
-            console.log("Attempting Salesforce login...");
-            if (sfConnection && sfConnection.accessToken) {
-                console.log("Already logged in. Current userInfo:", JSON.stringify(sfConnection.userInfo, null, 2));
-                updateSalesforceLoginStatus(true);
-                return;
-            }
             if (typeof jsforce === 'undefined') {
-                console.error("jsforce library is not loaded!");
-                if(salesforceStatusElement) salesforceStatusElement.textContent = "Error: jsforce library not found.";
+                updateSalesforceLoginStatus(false, "Error: jsforce library not found.");
                 return;
             }
-            jsforce.browser.init({
-                clientId: SF_CLIENT_ID,
-                redirectUri: SF_REDIRECT_URI,
-                loginUrl: SF_LOGIN_URL,
-                version: '58.0'
-            });
-            jsforce.browser.login({}, function(err, userInfo) { 
+            jsforce.browser.init({ clientId: SF_CLIENT_ID, redirectUri: SF_REDIRECT_URI, loginUrl: SF_LOGIN_URL, version: '58.0' });
+            jsforce.browser.login({}, (err, userInfo) => {
                 if (err) {
                     console.error("Salesforce login error:", err);
                     updateSalesforceLoginStatus(false, `Login failed: ${err.message || 'Unknown error'}`);
                     return;
                 }
-                console.log("Salesforce login successful. UserInfo from login() callback:", JSON.stringify(userInfo, null, 2));
-                sfConnection = jsforce.browser.connection; 
-                
-                if (userInfo && (!sfConnection.userInfo || !sfConnection.userInfo.id)) { 
-                     console.log("Assigning userInfo from login callback to sfConnection.userInfo as it seems more complete or sfConnection.userInfo is missing ID.");
-                     sfConnection.userInfo = userInfo; 
-                     if(sfConnection.userInfo && sfConnection.userInfo.user_id && !sfConnection.userInfo.id) {
-                        sfConnection.userInfo.id = sfConnection.userInfo.user_id;
-                     }
-                }
-                console.log("sfConnection.userInfo after login and potential assignment:", JSON.stringify(sfConnection.userInfo, null, 2));
+                sfConnection = jsforce.browser.connection;
                 updateSalesforceLoginStatus(true);
             });
         }
 
         function checkSalesforceSession() {
-            console.log("Checking Salesforce session...");
             if (typeof jsforce === 'undefined') {
-                console.error("jsforce library is not loaded for session check!");
                 updateSalesforceLoginStatus(false, "JSforce library error.");
                 return;
             }
-            jsforce.browser.init({
-                clientId: SF_CLIENT_ID,
-                redirectUri: SF_REDIRECT_URI,
-                loginUrl: SF_LOGIN_URL,
-                version: '58.0'
-            });
-
+            jsforce.browser.init({ clientId: SF_CLIENT_ID, redirectUri: SF_REDIRECT_URI, loginUrl: SF_LOGIN_URL, version: '58.0' });
             if (jsforce.browser.connection && jsforce.browser.connection.accessToken) {
                 sfConnection = jsforce.browser.connection;
-                console.log("Session restored by jsforce.browser.connection. Initial sfConnection.userInfo:", JSON.stringify(sfConnection.userInfo, null, 2));
-                
-                if (!sfConnection.userInfo || !sfConnection.userInfo.id ) { 
-                    console.log("Session restored, but sfConnection.userInfo.id is missing. Attempting to fetch full identity via sfConnection.identity()...");
-                    sfConnection.identity((err, res) => { 
-                        if (err) {
-                            console.error("Error fetching identity during session check:", err);
-                            updateSalesforceLoginStatus(true, "Logged in (Connection issue)."); 
-                            return;
-                        }
-                        console.log("Identity call successful. Full identity response (res):", JSON.stringify(res, null, 2));
-                        sfConnection.userInfo = res; 
-                        if(sfConnection.userInfo && sfConnection.userInfo.user_id && !sfConnection.userInfo.id) {
-                            sfConnection.userInfo.id = sfConnection.userInfo.user_id;
-                        }
-                        updateSalesforceLoginStatus(true); 
-                    });
-                } else {
-                    console.log("Salesforce session restored with existing userInfo containing an ID.");
-                    updateSalesforceLoginStatus(true); 
-                }
+                updateSalesforceLoginStatus(true);
             } else {
-                console.log("No active Salesforce session found by jsforce.browser.connection.");
                 updateSalesforceLoginStatus(false);
             }
         }
 
         function salesforceLogout() {
-            console.log("Attempting Salesforce logout...");
             if (sfConnection) {
-                sfConnection.logout(function(err) {
-                    if (err) {
-                        console.error('Salesforce logout error', err);
-                        updateSalesforceLoginStatus(true, "Logout failed, still connected.");
-                        return;
-                    }
-                    console.log('Salesforce logout successful.');
+                sfConnection.logout(err => {
+                    if (err) return console.error('Salesforce logout error', err);
                     sfConnection = null;
-                    jsforce.browser.clear(); 
+                    jsforce.browser.clear();
                     updateSalesforceLoginStatus(false);
                 });
             } else {
-                jsforce.browser.clear(); 
-                updateSalesforceLoginStatus(false); 
+                jsforce.browser.clear();
+                updateSalesforceLoginStatus(false);
             }
         }
-
+        
         async function sendToSalesforce() {
             if (!sfConnection || !sfConnection.accessToken) {
                 alert("Please login to Salesforce first.");
-                salesforceLogin(); 
+                salesforceLogin();
                 return;
             }
-            if (!sfConnection.userInfo || !sfConnection.userInfo.id) { 
-                alert("Salesforce user information is not available. Please try logging out and back in.");
-                console.error("Salesforce userInfo or userInfo.id is missing for Scanned_By_User__c mapping:", sfConnection.userInfo);
-                updateSalesforceLoginStatus(true, "User info missing. Re-login needed."); 
-                return;
-            }
-            if (!locationSelect || !locationSelect.value) { 
-                alert("Please select a Location.");
-                if (locationSelect) locationSelect.focus();
-                return;
-            }
-            if (!scannedByInput || !scannedByInput.value.trim()) {
-                alert("Please ensure 'Scanned By' field (your name) is filled.");
-                if (scannedByInput) scannedByInput.focus();
+            if (!locationSelect.value || !scannedByInput.value.trim()) {
+                alert("Please ensure Location and 'Scanned By' are filled in.");
                 return;
             }
             if (scannedItems.length === 0) {
@@ -762,121 +759,81 @@
                 return;
             }
 
-            scanStatusElement.textContent = 'Preparing data for Salesforce...';
+            scanStatusElement.textContent = `Sending ${scannedItems.length} items to Salesforce...`;
             scanStatusElement.className = 'status-info';
             sendButton.disabled = true;
 
-            const platformEventsToSend = [];
-            const sessionInfoData = {
-                location: locationSelect.value,
-                scannedByText: scannedByInput.value.trim(), 
-                dateScanned: dateScannedInput.value
-            };
-
-            for (const item of scannedItems) {
-                let manualMake = null;
-                let manualVin = null;
-
-                if (item.scanType === "MANUAL" || item.scanType === "MANUAL_NEW") {
-                    const parts = item.text.replace("MANUAL:", "").trim().split("- VIN:");
-                    manualMake = parts[0]?.trim();
-                    manualVin = parts[1]?.trim();
-                }
+            const platformEventsToSend = scannedItems.map(item => {
+                const parts = (item.scanType === "MANUAL" || item.scanType === "MANUAL_NEW") ? item.text.replace("MANUAL:", "").trim().split("- VIN:") : [null, null];
+                const manualMake = parts[0]?.trim() || null;
+                const manualVin = parts[1]?.trim() || null;
 
                 const eventPayload = {
-                    Location__c: sessionInfoData.location,
-                    Scanned_By_User__c: sessionInfoData.scannedByText, 
-                    Date_Scanned__c: new Date(sessionInfoData.dateScanned).toISOString(),
-                    QR_Code_Text__c: item.text, 
+                    Location__c: locationSelect.value,
+                    Scanned_By_User__c: scannedByInput.value.trim(),
+                    Date_Scanned__c: new Date(dateScannedInput.value).toISOString(),
+                    QR_Code_Text__c: item.text,
                     Latitude__c: item.latitude,
                     Longitude__c: item.longitude,
                     Accuracy__c: item.accuracy,
                     Geolocation_Timestamp__c: item.timestamp ? new Date(item.timestamp).toISOString() : null,
-                    Scan_Type__c: item.scanType, // Use the stored scan type
-                    Manual_Make__c: manualMake, 
+                    Scan_Type__c: item.scanType,
+                    Manual_Make__c: manualMake,
                     Manual_VIN__c: manualVin,
-                    Linked_Trailer_ID__c: item.salesforceId || null 
+                    Linked_Trailer_ID__c: item.salesforceId || null
                 };
-                
-                if (item.manualDetails) { // Primarily for "MANUAL_NEW"
-                    eventPayload.Manual_Type__c = item.manualDetails.type; 
-                    eventPayload.Manual_Trailer_Type_Spec__c = item.manualDetails.trailerType; 
-                    if (item.manualDetails.model) {
-                        eventPayload.Manual_Model__c = item.manualDetails.model; 
-                    }
-                    if (item.manualDetails.owner) {
-                        eventPayload.Manual_Trailer_Owner__c = item.manualDetails.owner; 
-                    }
-                }
-                
-                if (!item.salesforceId && eventPayload.hasOwnProperty('Linked_Trailer_ID__c')) delete eventPayload.Linked_Trailer_ID__c;
-                if (item.geoError === null || typeof item.geoError === 'undefined') delete eventPayload.Geolocation_Error__c;
-                if (manualMake === null && eventPayload.hasOwnProperty('Manual_Make__c')) delete eventPayload.Manual_Make__c;
-                if (manualVin === null && eventPayload.hasOwnProperty('Manual_VIN__c')) delete eventPayload.Manual_VIN__c;
-                if (!item.manualDetails?.model && eventPayload.hasOwnProperty('Manual_Model__c')) delete eventPayload.Manual_Model__c;
-                if (!item.manualDetails?.owner && eventPayload.hasOwnProperty('Manual_Trailer_Owner__c')) delete eventPayload.Manual_Trailer_Owner__c;
-                // Ensure required manual details are not deleted if they were set (they should exist if scanType is MANUAL_NEW)
-                if (item.scanType === "MANUAL_NEW" && !item.manualDetails?.type && eventPayload.hasOwnProperty('Manual_Type__c')) {
-                     // This case shouldn't happen if validation in handleAddManualEntry is correct, but as a safeguard:
-                     console.warn("MANUAL_NEW item missing Manual_Type__c in payload prep. Item:", item);
-                }
-                if (item.scanType === "MANUAL_NEW" && !item.manualDetails?.trailerType && eventPayload.hasOwnProperty('Manual_Trailer_Type_Spec__c')) {
-                     console.warn("MANUAL_NEW item missing Manual_Trailer_Type_Spec__c in payload prep. Item:", item);
-                }
 
-
-                platformEventsToSend.push(eventPayload);
-            }
-
-            if (platformEventsToSend.length === 0) {
-                scanStatusElement.textContent = 'No valid items to send.';
-                scanStatusElement.className = 'status-info';
-                if(sendButton) sendButton.disabled = scannedItems.length > 0 ? false : true;
-                return;
-            }
+                if (item.manualDetails) {
+                    eventPayload.Manual_Type__c = item.manualDetails.type;
+                    eventPayload.Manual_Trailer_Type_Spec__c = item.manualDetails.trailerType;
+                    if (item.manualDetails.model) eventPayload.Manual_Model__c = item.manualDetails.model;
+                    if (item.manualDetails.owner) eventPayload.Manual_Trailer_Owner__c = item.manualDetails.owner;
+                }
+                // Clean up null/undefined properties before sending
+                Object.keys(eventPayload).forEach(key => (eventPayload[key] == null) && delete eventPayload[key]);
+                return eventPayload;
+            });
             
-            console.log("Payload to send:", JSON.stringify(platformEventsToSend, null, 2));
-
             try {
                 const results = await sfConnection.sobject(PLATFORM_EVENT_API_NAME).create(platformEventsToSend);
                 console.log("Platform Events published response:", results);
 
-                let successCount = 0;
+                const successfulIndices = [];
                 let errorMessages = [];
                 const resultsArray = Array.isArray(results) ? results : [results];
 
-                resultsArray.forEach(result => {
+                resultsArray.forEach((result, index) => {
                     if (result.success) {
-                        successCount++;
+                        successfulIndices.push(index);
                     } else {
-                        let errors = "Unknown error";
-                        if (result.errors && result.errors.length > 0) {
-                           errors = result.errors.map(e => `${e.statusCode}: ${e.message} [${(e.fields || []).join(',')}]`).join('; ');
-                        }
-                        errorMessages.push(`Failed: ${errors}`);
-                        console.error("Failed item details:", result);
+                        let errors = result.errors && result.errors.length > 0 ? result.errors.map(e => e.message).join('; ') : "Unknown error";
+                        errorMessages.push(`Item "${platformEventsToSend[index].QR_Code_Text__c.substring(0,20)}..." failed: ${errors}`);
                     }
                 });
 
-                if (successCount === platformEventsToSend.length) {
-                    scanStatusElement.textContent = `Successfully sent ${successCount} items to Salesforce!`;
+                if (successfulIndices.length === platformEventsToSend.length) {
+                    scanStatusElement.textContent = `Successfully sent all ${successfulIndices.length} items!`;
                     scanStatusElement.className = 'status-success';
-                    scannedItems.length = 0; 
-                    updateScannedList(); 
+                    scannedItems.length = 0; // Clear the whole array
                 } else {
-                    scanStatusElement.textContent = `Sent ${successCount}/${platformEventsToSend.length}. Errors: ${errorMessages.join(' | ')}`;
+                    scanStatusElement.textContent = `Sent ${successfulIndices.length}/${platformEventsToSend.length}. Failed items remain. Errors: ${errorMessages.join(' | ')}`;
                     scanStatusElement.className = 'status-error';
+                    // --- ENHANCEMENT: Remove only successful items, in reverse order
+                    for (let i = successfulIndices.length - 1; i >= 0; i--) {
+                        scannedItems.splice(successfulIndices[i], 1);
+                    }
                 }
-
             } catch (err) {
                 console.error("Error publishing Platform Events:", err);
                 scanStatusElement.textContent = `Error sending to SF: ${err.message || JSON.stringify(err)}`;
                 scanStatusElement.className = 'status-error';
             } finally {
-                if(sendButton) sendButton.disabled = scannedItems.length === 0 || !sfConnection;
+                updateScannedList();
+                saveStateToLocalStorage();
+                sendButton.disabled = scannedItems.length === 0 || !sfConnection;
             }
         }
-
+        
         // --- VIN Search Functions ---
         function clearVinSearchResults() {
             if (vinSearchResultsDiv) {
@@ -884,165 +841,127 @@
                 vinSearchResultsDiv.style.display = 'none';
             }
         }
-
+        
         function displayVinSearchResults(results) {
-            if (!vinSearchResultsDiv) return;
-            clearVinSearchResults(); 
-
+            clearVinSearchResults();
             if (!results || results.length === 0) {
                 vinSearchResultsDiv.innerHTML = '<div class="no-results">No matching VINs found.</div>';
-                vinSearchResultsDiv.style.display = 'block';
-                return;
-            }
-
-            results.forEach(record => {
-                const itemDiv = document.createElement('div');
-                const vin = record[SF_VIN_FIELD_API_NAME] || 'N/A VIN';
-                const make = record[SF_MAKE_FIELD_API_NAME] || 'N/A Make';
-                const type = record[SF_TYPE_FIELD_API_NAME] || 'N/A Type';
-                let displayText = `${type} - ${make} - ${vin}`;
-
-                itemDiv.textContent = displayText;
-                itemDiv.dataset.vin = vin;
-                itemDiv.dataset.make = make;
-                itemDiv.dataset.id = record.Id;
-
-                itemDiv.addEventListener('click', () => {
-                    if (manualVinInput) manualVinInput.value = itemDiv.dataset.vin;
-                    if (manualMakeInput) manualMakeInput.value = itemDiv.dataset.make;
-                    selectedSalesforceTrailerId = itemDiv.dataset.id; 
-                    console.log("Selected Salesforce Trailer ID:", selectedSalesforceTrailerId); 
-                    clearVinSearchResults();
-                    if (manualNewTypeSelect) manualNewTypeSelect.value = "";
-                    if (manualTrailerTypeSelect) manualTrailerTypeSelect.value = "";
-                    if (manualModelInput) manualModelInput.value = "";
-                    if (manualTrailerOwnerInput) manualTrailerOwnerInput.value = "";
+            } else {
+                results.forEach(record => {
+                    const itemDiv = document.createElement('div');
+                    const vin = record[SF_VIN_FIELD_API_NAME] || 'N/A';
+                    const make = record[SF_MAKE_FIELD_API_NAME] || 'N/A';
+                    const type = record[SF_TYPE_FIELD_API_NAME] || 'N/A';
+                    itemDiv.textContent = `${type} - ${make} - ${vin}`;
+                    itemDiv.dataset.id = record.Id;
+                    itemDiv.dataset.vin = vin;
+                    itemDiv.dataset.make = make;
+                    itemDiv.addEventListener('click', () => {
+                        manualVinInput.value = itemDiv.dataset.vin;
+                        manualMakeInput.value = itemDiv.dataset.make;
+                        selectedSalesforceTrailerId = itemDiv.dataset.id;
+                        clearVinSearchResults();
+                        // --- ENHANCEMENT: Smart form - disable unneeded fields ---
+                        [manualNewTypeSelect, manualTrailerTypeSelect].forEach(el => {
+                            el.value = "";
+                            el.disabled = true;
+                        });
+                    });
+                    vinSearchResultsDiv.appendChild(itemDiv);
                 });
-                vinSearchResultsDiv.appendChild(itemDiv);
-            });
+            }
             vinSearchResultsDiv.style.display = 'block';
         }
 
         async function searchVinsInSalesforce(partialVin) {
-            if (!sfConnection || !sfConnection.accessToken) {
-                console.log("Not logged into Salesforce. VIN search unavailable.");
-                if (vinSearchResultsDiv) {
-                    vinSearchResultsDiv.innerHTML = '<div class="no-results">Login to Salesforce to search VINs.</div>';
-                    vinSearchResultsDiv.style.display = 'block';
-                }
-                return;
-            }
-            
-            if (!partialVin || partialVin.length < MIN_VIN_SEARCH_LENGTH) {
+            if (!sfConnection || partialVin.length < MIN_VIN_SEARCH_LENGTH) {
                 clearVinSearchResults();
                 return;
             }
-
-            if (vinSearchResultsDiv) {
-                vinSearchResultsDiv.innerHTML = '<div class="no-results">Searching...</div>';
-                vinSearchResultsDiv.style.display = 'block';
-            }
-
-            const fieldsToSelect = ['Id', SF_VIN_FIELD_API_NAME];
-            if (SF_MAKE_FIELD_API_NAME) {
-                fieldsToSelect.push(SF_MAKE_FIELD_API_NAME);
-            }
-            if (SF_TYPE_FIELD_API_NAME) {
-                fieldsToSelect.push(SF_TYPE_FIELD_API_NAME);
-            }
-            
-            const sanitizedPartialVin = partialVin.replace(/'/g, "\\'"); 
-            const soqlQuery = `
-                SELECT ${fieldsToSelect.join(', ')}
-                FROM ${SF_VIN_SEARCH_OBJECT}
-                WHERE ${SF_VIN_FIELD_API_NAME} LIKE '%${sanitizedPartialVin}%'
-                ORDER BY ${SF_VIN_FIELD_API_NAME} ASC
-                LIMIT 10
-            `;
-
+            vinSearchResultsDiv.innerHTML = '<div class="no-results">Searching...</div>';
+            vinSearchResultsDiv.style.display = 'block';
+            const soqlQuery = `SELECT Id, ${SF_VIN_FIELD_API_NAME}, ${SF_MAKE_FIELD_API_NAME}, ${SF_TYPE_FIELD_API_NAME} FROM ${SF_VIN_SEARCH_OBJECT} WHERE ${SF_VIN_FIELD_API_NAME} LIKE '%${partialVin.replace(/'/g, "\\'")}%' ORDER BY ${SF_VIN_FIELD_API_NAME} ASC LIMIT 10`;
             try {
-                console.log("Executing SOQL for VIN search:", soqlQuery);
                 const result = await sfConnection.query(soqlQuery);
-                console.log("VIN Search results:", result);
-                if (result.records) {
-                    displayVinSearchResults(result.records);
-                } else {
-                    displayVinSearchResults([]); 
-                }
+                displayVinSearchResults(result.records);
             } catch (err) {
                 console.error('Salesforce VIN search error:', err);
-                if (vinSearchResultsDiv) {
-                    vinSearchResultsDiv.innerHTML = `<div class="no-results">Error searching: ${err.message}</div>`;
-                    vinSearchResultsDiv.style.display = 'block';
-                }
+                vinSearchResultsDiv.innerHTML = `<div class="no-results">Error: ${err.message}</div>`;
             }
         }
 
         function handleVinInput() {
-            selectedSalesforceTrailerId = null; 
+            selectedSalesforceTrailerId = null;
+            // --- ENHANCEMENT: Smart form - re-enable fields ---
+            [manualNewTypeSelect, manualTrailerTypeSelect].forEach(el => el.disabled = false);
+
             clearTimeout(vinSearchDebounceTimer);
-            const searchTerm = manualVinInput.value.trim(); 
+            const searchTerm = manualVinInput.value.trim();
             if (searchTerm.length >= MIN_VIN_SEARCH_LENGTH) {
-                vinSearchDebounceTimer = setTimeout(() => {
-                    searchVinsInSalesforce(searchTerm);
-                }, 500);
+                vinSearchDebounceTimer = setTimeout(() => searchVinsInSalesforce(searchTerm), 500);
             } else {
                 clearVinSearchResults();
             }
         }
 
         // --- QR Scanner & App Logic Functions ---
+        // --- ENHANCEMENT: Rewritten to include remove button and item counter ---
         function updateScannedList() {
             if (!scannedItemsListElement) return;
+            const containerHeader = document.querySelector('#scanned-items-container h2');
+            if (containerHeader) containerHeader.textContent = `Scanned Items: (${scannedItems.length})`;
+            
             scannedItemsListElement.innerHTML = '';
-            scannedItems.forEach(item => {
+            scannedItems.forEach((item, index) => {
                 const listItem = document.createElement('li');
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'item-content';
+
                 let displayText = item.text;
-                if (item.scanType === "MANUAL") { // Linked to existing SF record
-                     displayText += ` <strong style="color: #28a745;">(SF Linked: ${item.salesforceId.substring(0, 6)}...)</strong>`;
-                } else if (item.scanType === "MANUAL_NEW") { // New manual entry
-                    displayText += ` <em style="color: #17a2b8;">(New Manual: ${item.manualDetails.type}, ${item.manualDetails.trailerType})</em>`;
-                }
-                // For QR, no specific trailer type indicator here unless you add it to item.text
+                if (item.scanType === "MANUAL") displayText += ` <strong style="color: #28a745;">(SF Linked)</strong>`;
+                else if (item.scanType === "MANUAL_NEW") displayText += ` <em style="color: #17a2b8;">(New Manual)</em>`;
 
                 let geoInfo = '';
-                if (item.geoError) {
-                    geoInfo = `<span class="item-geo">(Geo: ${item.geoError})</span>`;
-                } else if (item.latitude !== null && item.longitude !== null) {
-                    geoInfo = `<span class="item-geo">(Lat: ${item.latitude.toFixed(5)}, Lon: ${item.longitude.toFixed(5)}, Acc: ${item.accuracy}m)</span>`;
-                }
-                listItem.innerHTML = `${displayText} ${geoInfo}`;
+                if (item.geoError) geoInfo = `<span class="item-geo">(Geo: ${item.geoError})</span>`;
+                else if (item.latitude !== null) geoInfo = `<span class="item-geo">(Lat: ${item.latitude.toFixed(5)}, Lon: ${item.longitude.toFixed(5)})</span>`;
+
+                contentDiv.innerHTML = `${displayText} ${geoInfo}`;
+
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-item-btn';
+                removeBtn.title = 'Remove this item';
+                removeBtn.innerHTML = '&times;';
+                removeBtn.onclick = () => {
+                    scannedItems.splice(index, 1);
+                    updateScannedList();
+                    saveStateToLocalStorage();
+                };
+
+                listItem.appendChild(contentDiv);
+                listItem.appendChild(removeBtn);
                 scannedItemsListElement.appendChild(listItem);
             });
-            if (sendButton) sendButton.disabled = scannedItems.length === 0 || !sfConnection;
+            
+            sendButton.disabled = scannedItems.length === 0 || !isSalesforceLoggedIn;
+            sendButton.innerHTML = sendButton.innerHTML.replace(/Send .* to/g, `Send ${scannedItems.length} to`);
         }
-
+        
         async function checkInitialGeolocationPermission() {
-            if (!checkLocationButton || !scanStatusElement) return;
-            if (navigator.geolocation && typeof navigator.permissions?.query === 'function') {
-                try {
-                    const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
-                    updateCheckLocationButtonText(permissionStatus.state);
-                    permissionStatus.onchange = () => updateCheckLocationButtonText(permissionStatus.state);
-                } catch (e) {
-                    console.warn("Error querying geolocation permissions:", e);
-                    if (checkLocationButton) checkLocationButton.textContent = "Enable Location (Click)";
-                }
-            } else {
-                if (checkLocationButton) {
-                    checkLocationButton.textContent = navigator.geolocation ? "Check Location Manually" : "Location N/A";
-                    if (!navigator.geolocation) checkLocationButton.disabled = true;
-                }
+             if (!checkLocationButton) return;
+             try {
+                const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+                updateCheckLocationButtonText(permissionStatus.state);
+                permissionStatus.onchange = () => updateCheckLocationButtonText(permissionStatus.state);
+            } catch (e) {
+                console.warn("Error querying geolocation permissions:", e);
+                checkLocationButton.textContent = "Enable Location (Click)";
             }
         }
 
         function updateCheckLocationButtonText(state) {
-            if (state === 'granted') {
-            isLocationEnabled = true;
-            } else {
-            isLocationEnabled = false;
-            }
-    checkAndShowAppContent();
+            isLocationEnabled = (state === 'granted');
+            checkAndShowAppContent();
             if (!checkLocationButton) return;
             if (state === 'granted') {
                 checkLocationButton.textContent = 'Location Enabled';
@@ -1058,59 +977,27 @@
                 checkLocationButton.disabled = false;
             }
         }
-
+        
         function requestGeolocationPermission(isExplicitRequest = false) {
             return new Promise((resolve, reject) => {
-                if (!navigator.geolocation) {
-                    const errorMsg = 'Geolocation is not supported.';
-                    if (isExplicitRequest && scanStatusElement) {
-                        scanStatusElement.textContent = errorMsg;
-                        scanStatusElement.className = 'status-error';
-                    }
-                    if (checkLocationButton) updateCheckLocationButtonText('denied'); 
-                    reject(new Error(errorMsg));
-                    return;
-                }
+                if (!navigator.geolocation) return reject(new Error('Geolocation is not supported.'));
                 navigator.geolocation.getCurrentPosition(
-                    (position) => {
+                    position => {
+                        updateCheckLocationButtonText('granted');
                         if (isExplicitRequest && scanStatusElement) {
-                            scanStatusElement.textContent = 'Location access granted!';
-                            scanStatusElement.className = 'status-success';
-                            setTimeout(() => {
-                                if (scanStatusElement && scanStatusElement.textContent === 'Location access granted!') { 
-                                    scanStatusElement.textContent = 'Ready to scan.';
-                                    scanStatusElement.className = 'status-info';
-                                }
-                            }, 2000);
+                           scanStatusElement.textContent = 'Location access granted!';
+                           scanStatusElement.className = 'status-success';
+                           setTimeout(() => { if (scanStatusElement.textContent === 'Location access granted!') scanStatusElement.textContent = 'Ready.'; }, 2000);
                         }
-                        if (checkLocationButton && typeof navigator.permissions?.query === 'function') {
-                             navigator.permissions.query({name:'geolocation'}).then(ps => updateCheckLocationButtonText(ps.state));
-                        } else if (checkLocationButton) {
-                            updateCheckLocationButtonText('granted');
-                        }
-                        resolve({
-                            latitude: position.coords.latitude,
-                            longitude: position.coords.longitude,
-                            accuracy: position.coords.accuracy,
-                            timestamp: new Date(position.timestamp).toISOString() 
-                        });
+                        resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy, timestamp: new Date(position.timestamp).toISOString() });
                     },
-                    (error) => {
-                        let errorMessage = 'Could not get location: ';
-                        switch(error.code) {
-                            case error.PERMISSION_DENIED: errorMessage += "Permission denied."; break;
-                            case error.POSITION_UNAVAILABLE: errorMessage += "Position unavailable."; break;
-                            case error.TIMEOUT: errorMessage += "Request timeout."; break;
-                            default: errorMessage += "Unknown error."; break;
-                        }
-                        if (isExplicitRequest && scanStatusElement) {
+                    error => {
+                        updateCheckLocationButtonText(error.code === error.PERMISSION_DENIED ? 'denied' : 'prompt');
+                        const messages = { 1: "Permission denied.", 2: "Position unavailable.", 3: "Request timeout." };
+                        const errorMessage = `Could not get location: ${messages[error.code] || "Unknown error."}`;
+                         if (isExplicitRequest && scanStatusElement) {
                             scanStatusElement.textContent = errorMessage;
                             scanStatusElement.className = 'status-error';
-                        }
-                         if (checkLocationButton && typeof navigator.permissions?.query === 'function') {
-                             navigator.permissions.query({name:'geolocation'}).then(ps => updateCheckLocationButtonText(ps.state));
-                        } else if (checkLocationButton) {
-                            updateCheckLocationButtonText('denied'); 
                         }
                         reject(new Error(errorMessage));
                     },
@@ -1118,257 +1005,152 @@
                 );
             });
         }
-
-        async function fetchCurrentLocation() {
-            return requestGeolocationPermission(false); 
-        }
-
+        
         async function onScanSuccess(decodedText, decodedResult) {
-            if (!scanStatusElement || !scanSuccessOverlay) return;
             const trimmedDecodedText = decodedText.trim();
-            if (scannedItems.some(item => item.text === trimmedDecodedText && item.scanType === "QR")) { // Ensure QR duplicates are checked
-                if(scanStatusElement) {
-                    scanStatusElement.textContent = `"${trimmedDecodedText.substring(0,20)}..." already scanned.`;
-                    scanStatusElement.className = 'status-info';
-                }
+            if (scannedItems.some(item => item.text === trimmedDecodedText && item.scanType === "QR")) {
+                scanStatusElement.textContent = `"${trimmedDecodedText.substring(0,20)}..." already scanned.`;
+                scanStatusElement.className = 'status-info';
                 return;
             }
-            if(scanSuccessOverlay) scanSuccessOverlay.classList.add('visible');
-            if(scanStatusElement) {
-                scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Getting location...`;
-                scanStatusElement.className = 'status-info';
-            }
+            scanSuccessOverlay.classList.add('visible');
+            scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Getting location...`;
+            scanStatusElement.className = 'status-info';
 
-            let geoData = { latitude: null, longitude: null, accuracy: null, geoError: null, timestamp: new Date().toISOString() };
+            let geoData = { latitude: null, longitude: null, accuracy: null, geoError: null, timestamp: Date.now() };
             try {
-                const location = await fetchCurrentLocation();
-                geoData = {...geoData, ...location}; 
-                if(scanStatusElement) {
-                    scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Location captured!`;
-                    scanStatusElement.className = 'status-success';
-                }
+                geoData = { ...geoData, ...await requestGeolocationPermission() };
+                scanStatusElement.textContent = `Scanned & location captured!`;
+                scanStatusElement.className = 'status-success';
             } catch (error) {
                 geoData.geoError = error.message;
-                if(scanStatusElement) {
-                    scanStatusElement.textContent = `Scanned: "${trimmedDecodedText.substring(0,30)}...". Geo Error: ${error.message}`;
-                    scanStatusElement.className = 'status-error'; 
-                }
+                scanStatusElement.textContent = `Scanned. Geo Error: ${error.message}`;
+                scanStatusElement.className = 'status-error';
             }
-            scannedItems.push({ 
-                text: trimmedDecodedText, 
-                salesforceId: null, 
-                manualDetails: null, 
-                scanType: "QR", // Explicitly set scan type for QR
-                ...geoData 
-            }); 
+            scannedItems.push({ text: trimmedDecodedText, scanType: "QR", ...geoData });
             updateScannedList();
+            saveStateToLocalStorage();
             if (navigator.vibrate) navigator.vibrate(100);
-            if(scanSuccessOverlay) setTimeout(() => scanSuccessOverlay.classList.remove('visible'), 1200);
+            setTimeout(() => scanSuccessOverlay.classList.remove('visible'), 1200);
         }
 
         function onScanFailure(error) { /* console.warn(`QR error = ${error}`); */ }
 
         function toggleManualEntryForm(show) {
-            if (manualEntryFormContainer) {
-                manualEntryFormContainer.style.display = show ? 'block' : 'none';
-                if (show) {
-                    if(manualMakeInput) manualMakeInput.value = '';
-                    if(manualVinInput) manualVinInput.value = '';
-                    if(manualNewTypeSelect) manualNewTypeSelect.value = '';
-                    if(manualTrailerTypeSelect) manualTrailerTypeSelect.value = '';
-                    if(manualModelInput) manualModelInput.value = '';
-                    if(manualTrailerOwnerInput) manualTrailerOwnerInput.value = '';
-                    if(manualEntryStatus) manualEntryStatus.textContent = '';
-                    selectedSalesforceTrailerId = null; 
-                    clearVinSearchResults(); 
-                    if(manualVinInput) manualVinInput.focus();
-                    if (html5QrCode && html5QrCode.isScanning) {
-                        stopScanning();
-                        if (scanStatusElement) { 
-                           scanStatusElement.textContent = "Scanner stopped for manual entry.";
-                        }
-                    }
-                } else {
-                    selectedSalesforceTrailerId = null; 
-                    clearVinSearchResults();
+            manualEntryFormContainer.style.display = show ? 'block' : 'none';
+            if (show) {
+                manualVinInput.value = '';
+                manualMakeInput.value = '';
+                manualModelInput.value = '';
+                manualTrailerOwnerInput.value = '';
+                manualEntryStatus.textContent = '';
+                selectedSalesforceTrailerId = null;
+                clearVinSearchResults();
+                // Ensure form is reset to an enabled state
+                [manualNewTypeSelect, manualTrailerTypeSelect].forEach(el => {
+                    el.value = "";
+                    el.disabled = false;
+                });
+                manualVinInput.focus();
+                if (html5QrCode && html5QrCode.isScanning) {
+                    stopScanning();
+                    scanStatusElement.textContent = "Scanner stopped for manual entry.";
                 }
             }
         }
         
         async function handleAddManualEntry() {
-            if (!manualMakeInput || !manualVinInput || !manualEntryStatus ||
-                !manualNewTypeSelect || !manualTrailerTypeSelect || !manualModelInput || !manualTrailerOwnerInput) return;
-
             const make = manualMakeInput.value.trim();
             const vin = manualVinInput.value.trim();
-            
             if (!make || !vin) {
                 manualEntryStatus.textContent = "Make and VIN are required.";
                 manualEntryStatus.style.color = 'red';
-                if (!make) manualMakeInput.focus(); else manualVinInput.focus();
                 return;
             }
             
-            const currentSalesforceId = selectedSalesforceTrailerId; 
-            let manualEntryText = `MANUAL: ${make} - VIN: ${vin}`;
+            let itemScanType = "MANUAL";
             let manualDetailsPayload = null;
-            let itemScanType = "MANUAL"; // Default for linked entries
-
-            if (currentSalesforceId === null) { // This is a new trailer not found/selected from SF
+            if (selectedSalesforceTrailerId === null) {
                 itemScanType = "MANUAL_NEW";
                 const newType = manualNewTypeSelect.value;
                 const trailerType = manualTrailerTypeSelect.value;
-                const model = manualModelInput.value.trim();
-                const owner = manualTrailerOwnerInput.value.trim();
-
-                if (!newType) {
-                    manualEntryStatus.textContent = "Type is required for new trailer entries not found in Salesforce.";
+                if (!newType || !trailerType) {
+                    manualEntryStatus.textContent = "Type and Trailer Type are required for new trailer entries.";
                     manualEntryStatus.style.color = 'red';
-                    manualNewTypeSelect.focus();
                     return;
                 }
-                if (!trailerType) {
-                    manualEntryStatus.textContent = "Trailer Type is required for new trailer entries not found in Salesforce.";
-                    manualEntryStatus.style.color = 'red';
-                    manualTrailerTypeSelect.focus();
-                    return;
-                }
-                manualDetailsPayload = {
-                    type: newType,
-                    trailerType: trailerType,
-                    model: model || null,
-                    owner: owner || null
-                };
+                manualDetailsPayload = { type: newType, trailerType: trailerType, model: manualModelInput.value.trim() || null, owner: manualTrailerOwnerInput.value.trim() || null };
             }
             
-            // Check for duplicates based on text and the determined scan type
-            if (scannedItems.some(item => item.text.toUpperCase() === manualEntryText.toUpperCase() && item.scanType === itemScanType && item.salesforceId === currentSalesforceId )) {
-                manualEntryStatus.textContent = "This exact entry (including link status and type) already exists.";
+            const manualEntryText = `MANUAL: ${make} - VIN: ${vin}`;
+            if (scannedItems.some(item => item.text.toUpperCase() === manualEntryText.toUpperCase() && item.scanType === itemScanType)) {
+                manualEntryStatus.textContent = "This exact entry already exists.";
                 manualEntryStatus.style.color = 'orange';
                 return;
             }
 
-            manualEntryStatus.textContent = "Getting location for manual entry...";
+            manualEntryStatus.textContent = "Getting location...";
             manualEntryStatus.style.color = 'blue';
-            let geoData = { latitude: null, longitude: null, accuracy: null, geoError: null, timestamp: new Date().toISOString() };
-
+            let geoData = { latitude: null, longitude: null, accuracy: null, geoError: null, timestamp: Date.now() };
             try {
-                const location = await fetchCurrentLocation();
-                geoData = {...geoData, ...location};
+                geoData = { ...geoData, ...await requestGeolocationPermission() };
                 manualEntryStatus.textContent = "Manual entry added with location!";
                 manualEntryStatus.style.color = 'green';
             } catch (error) {
                 geoData.geoError = error.message;
-                manualEntryStatus.textContent = `Manual entry added. Geo Error: ${error.message}`;
+                manualEntryStatus.textContent = `Added. Geo Error: ${error.message}`;
                 manualEntryStatus.style.color = 'darkorange';
             }
-
-            scannedItems.push({
-                text: manualEntryText,
-                salesforceId: currentSalesforceId, 
-                manualDetails: manualDetailsPayload, 
-                scanType: itemScanType, // Store the determined scan type
-                ...geoData
-            });
+            
+            scannedItems.push({ text: manualEntryText, salesforceId: selectedSalesforceTrailerId, manualDetails: manualDetailsPayload, scanType: itemScanType, ...geoData });
             updateScannedList();
+            saveStateToLocalStorage();
             if (navigator.vibrate) navigator.vibrate(50);
-            
-            selectedSalesforceTrailerId = null; 
-            setTimeout(() => {
-                toggleManualEntryForm(false);
-            }, 1500);
+            setTimeout(() => toggleManualEntryForm(false), 1500);
         }
-
+        
         function startScanning() {
-            if (!scannedByInput || !startButton || !stopButton || !locationSelect || !scanStatusElement || !qrReaderDivForLibrary || !scannerViewportContainer) return;
-            
-            if (!locationSelect.value) {
-                alert("Please select a Location before starting the scanner.");
-                locationSelect.focus();
+            if (!locationSelect.value || !scannedByInput.value.trim()) {
+                alert("Please fill in Location and Scanned By before starting.");
                 return;
             }
-            if (!scannedByInput.value.trim()) {
-                alert("Please enter your name in 'Scanned By' field.");
-                scannedByInput.focus();
-                return;
-            }
-            
             startButton.disabled = true;
             stopButton.disabled = false;
-            if(locationSelect) locationSelect.disabled = true;
-            if(scannedByInput) scannedByInput.disabled = true;
+            [locationSelect, scannedByInput].forEach(el => el.disabled = true);
             scanStatusElement.textContent = 'Initializing scanner...';
             scanStatusElement.className = 'status-info';
-            const config = { fps: 10, qrbox: { width: 250, height: 250 }, facingMode: "environment" };
-            try {
-                if (!html5QrCode) { 
-                    html5QrCode = new Html5Qrcode("qr-reader");
-                }
-                if (html5QrCode.isScanning) {
-                    console.log("Scanner is already running.");
-                     if(scanStatusElement) scanStatusElement.textContent = 'Scanner is already active.';
-                    return;
-                }
-                html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
-                    .then(() => {
-                        if(scanStatusElement) scanStatusElement.textContent = 'Scanner started. Point camera at QR code.';
-                        if (scannerViewportContainer) scannerViewportContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    })
-                    .catch(err => {
-                        if(scanStatusElement) {
-                            scanStatusElement.textContent = `Error starting scanner: ${err.message}. Try another camera or check permissions.`;
-                            scanStatusElement.className = 'status-error';
-                        }
-                        console.error("Error starting scanner:", err);
-                        stopScanning(); 
-                    });
-            } catch (e) {
-                if(scanStatusElement) {
-                     scanStatusElement.textContent = `Scanner library error: ${e.message}.`;
-                     scanStatusElement.className = 'status-error';
-                }
-                console.error("Scanner instantiation/library error:", e);
-                stopScanning();
-            }
-        }
+            
+            if (!html5QrCode) html5QrCode = new Html5Qrcode("qr-reader");
+            if (html5QrCode.isScanning) return;
 
+            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess, onScanFailure)
+                .then(() => {
+                    scanStatusElement.textContent = 'Scanner started. Point camera at QR code.';
+                    scannerViewportContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                })
+                .catch(err => {
+                    scanStatusElement.textContent = `Error starting scanner: ${err.message}.`;
+                    scanStatusElement.className = 'status-error';
+                    console.error("Error starting scanner:", err);
+                    stopScanning();
+                });
+        }
+        
         function stopScanning() {
             if (html5QrCode && html5QrCode.isScanning) {
-                console.log("Attempting to stop html5QrCode scanner...");
-                html5QrCode.stop()
-                    .then(() => {
-                        console.log("html5QrCode scanner stopped successfully via promise.");
-                    })
-                    .catch(err => {
-                        console.warn("Error from html5QrCode.stop() promise:", err);
-                    })
-                    .finally(() => {
-                        if (qrReaderDivForLibrary) {
-                            qrReaderDivForLibrary.innerHTML = ""; 
-                            console.log("qr-reader div cleared.");
-                        }
-                    });
-            } else {
-                 if (qrReaderDivForLibrary && qrReaderDivForLibrary.innerHTML !== "") {
-                    qrReaderDivForLibrary.innerHTML = "";
-                    console.log("qr-reader div cleared (scanner was not active or instance was null but div had content).");
-                }
+                html5QrCode.stop().catch(err => console.warn("Error stopping scanner:", err))
+                           .finally(() => qrReaderDivForLibrary.innerHTML = "");
             }
-
-            if (scanStatusElement && !scanStatusElement.textContent.startsWith("Error starting scanner")) {
-                scanStatusElement.textContent = 'Scanner stopped.';
-                scanStatusElement.className = 'status-info';
-            }
-            if(startButton) startButton.disabled = false;
-            if(stopButton) stopButton.disabled = true;
-            if(locationSelect) locationSelect.disabled = false; 
-            if(scannedByInput) scannedByInput.disabled = false; 
+            scanStatusElement.textContent = 'Scanner stopped.';
+            scanStatusElement.className = 'status-info';
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            [locationSelect, scannedByInput].forEach(el => el.disabled = false);
         }
 
         // --- DOMContentLoaded: Initialization and Event Binding ---
         document.addEventListener('DOMContentLoaded', () => {
-            console.log("DOM fully loaded and parsed");
-
+            // Assign all element variables
             locationSelect = document.getElementById('location');
             scannedByInput = document.getElementById('scannedBy');
             dateScannedInput = document.getElementById('dateScanned');
@@ -1390,116 +1172,40 @@
             manualEntryStatus = document.getElementById('manualEntryStatus');
             salesforceLoginButton = document.getElementById('salesforceLoginButton');
             salesforceStatusElement = document.getElementById('salesforceStatus');
-            vinSearchResultsDiv = document.getElementById('vinSearchResults'); 
-            vinSearchHelpText = document.getElementById('vinSearchHelp'); 
+            vinSearchResultsDiv = document.getElementById('vinSearchResults');
+            vinSearchHelpText = document.getElementById('vinSearchHelp');
             manualNewTypeSelect = document.getElementById('manualNewType');
             manualTrailerTypeSelect = document.getElementById('manualTrailerType');
             manualModelInput = document.getElementById('manualModel');
             manualTrailerOwnerInput = document.getElementById('manualTrailerOwner');
 
-            if (vinSearchHelpText) {
-                vinSearchHelpText.textContent = `Type at least ${MIN_VIN_SEARCH_LENGTH} characters to search. If found & selected, some fields below may not be required.`;
-            }
+            // --- ENHANCEMENT: Load saved state on startup ---
+            loadStateFromLocalStorage();
 
-            try {
-                const today = new Date();
-                dateScannedInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-            } catch (e) {
-                console.error("Error setting date:", e);
-                if (scanStatusElement) scanStatusElement.textContent = "Error initializing date.";
-            }
+            // Initial setup
+            const today = new Date();
+            dateScannedInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            if (vinSearchHelpText) vinSearchHelpText.textContent = `Type at least ${MIN_VIN_SEARCH_LENGTH} characters to search...`;
 
-            if (salesforceLoginButton) salesforceLoginButton.onclick = salesforceLogin;
-            else console.error("Salesforce login button not found!");
+            // Bind events
+            startButton.addEventListener('click', startScanning);
+            stopButton.addEventListener('click', stopScanning);
+            sendButton.addEventListener('click', sendToSalesforce);
+            checkLocationButton.addEventListener('click', () => requestGeolocationPermission(true));
+            toggleManualEntryButton.addEventListener('click', () => toggleManualEntryForm(manualEntryFormContainer.style.display !== 'block'));
+            addManualEntryButton.addEventListener('click', handleAddManualEntry);
+            cancelManualEntryButton.addEventListener('click', () => toggleManualEntryForm(false));
+            manualVinInput.addEventListener('input', handleVinInput);
+            manualVinInput.addEventListener('blur', () => setTimeout(clearVinSearchResults, 200));
 
-            if (startButton) startButton.addEventListener('click', startScanning);
-            else console.error("startButton not found!");
+            // --- ENHANCEMENT: Save session inputs on change ---
+            locationSelect.addEventListener('change', saveStateToLocalStorage);
+            scannedByInput.addEventListener('input', saveStateToLocalStorage);
 
-            if (stopButton) stopButton.addEventListener('click', stopScanning);
-            else console.error("stopButton not found!");
-
-            if (sendButton) {
-                sendButton.addEventListener('click', sendToSalesforce);
-                sendButton.disabled = true; 
-            } else console.error("sendButton not found!");
-
-            if (checkLocationButton) {
-                checkLocationButton.addEventListener('click', () => {
-                    // Give the user immediate feedback
-                    checkLocationButton.disabled = true;
-                    checkLocationButton.textContent = "Checking...";
-
-                    // Call the function. It does NOT return a promise.
-                    // It handles all success/error UI updates internally via its callbacks.
-                    // The previous error was trying to chain ".catch()" to this call.
-                    requestGeolocationPermission(true); 
-                });
-            } else {
-                console.error("checkLocationButton not found! This is expected if the app content is already visible.");
-            }
-
-            if (toggleManualEntryButton) {
-                toggleManualEntryButton.addEventListener('click', () => {
-                    const isVisible = manualEntryFormContainer.style.display === 'block';
-                    toggleManualEntryForm(!isVisible);
-                });
-            } else console.error("toggleManualEntryButton not found!");
-
-            if (addManualEntryButton) addManualEntryButton.addEventListener('click', handleAddManualEntry);
-            else console.error("addManualEntryButton not found!");
-
-            if (cancelManualEntryButton) {
-                cancelManualEntryButton.addEventListener('click', () => toggleManualEntryForm(false));
-            } else console.error("cancelManualEntryButton not found!");
-
-            if (manualVinInput) {
-                manualVinInput.addEventListener('input', handleVinInput);
-                manualVinInput.addEventListener('blur', () => {
-                    setTimeout(clearVinSearchResults, 200); 
-                });
-                manualVinInput.addEventListener('keydown', (event) => {
-                    if (event.key === "Escape") {
-                        clearVinSearchResults();
-                    }
-                });
-            } else {
-                console.error("manualVinInput not found!");
-            }
-
-            if (scanStatusElement) {
-                scanStatusElement.textContent = 'Fill session info & click "Start Scanning". Or login to Salesforce.';
-                scanStatusElement.className = 'status-info';
-            }
             checkInitialGeolocationPermission();
             checkSalesforceSession();
-
             checkAndShowAppContent();
-
-            if (typeof Html5Qrcode !== 'undefined') {
-                Html5Qrcode.getCameras().then(devices => {
-                    if (!devices || !devices.length) {
-                        if (scanStatusElement) {
-                            scanStatusElement.textContent = 'No cameras found. Ensure camera and permissions are enabled.';
-                            scanStatusElement.className = 'status-error';
-                        }
-                        if (startButton) startButton.disabled = true;
-                    }
-                }).catch(err => {
-                    if (scanStatusElement) {
-                        scanStatusElement.textContent = 'Could not access cameras. Check browser permissions.';
-                        scanStatusElement.className = 'status-error';
-                    }
-                    if (startButton) startButton.disabled = true;
-                    console.error("Error getting cameras", err);
-                });
-            } else {
-                console.error("Html5Qrcode library not loaded for camera check!");
-                 if (scanStatusElement) {
-                    scanStatusElement.textContent = 'QR Scanner library not loaded.';
-                    scanStatusElement.className = 'status-error';
-                }
-                if (startButton) startButton.disabled = true;
-            }
+            updateScannedList();
         });
     </script>
 </body>
